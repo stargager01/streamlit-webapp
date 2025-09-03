@@ -1,6 +1,35 @@
 # utils.py
 
+# utils.py에 추가할 컴포넌트 함수
+
 import streamlit as st
+
+def create_navigation_buttons(prev_step, next_step, validation_func=None):
+    """
+    이전/다음 단계 버튼을 생성하고, 유효성 검사 함수가 있을 경우 이를 통과해야 다음 단계로 이동합니다.
+
+    Parameters:
+    - prev_step (int): 이전 단계 번호
+    - next_step (int): 다음 단계 번호
+    - validation_func (callable, optional): 유효성 검사 함수. True를 반환해야 다음 단계로 이동함.
+    """
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("이전 단계"):
+            st.session_state.step = prev_step
+            st.session_state.validation_errors = {}
+            st.rerun()
+
+    with col2:
+        if st.button("다음 단계로 이동 👉"):
+            st.session_state.validation_errors = {}
+
+            # 유효성 검사 함수가 있으면 실행
+            if validation_func is None or validation_func():
+                st.session_state.step = next_step
+                st.rerun()
+
 
 # 🔄 단계 이동 함수
 def go_next():
