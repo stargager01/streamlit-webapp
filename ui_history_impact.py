@@ -1,5 +1,5 @@
 import streamlit as st
-from utilsimport (
+from utils import (
     sync_widget_key,
     update_neck_none,
     update_neck_symptom,
