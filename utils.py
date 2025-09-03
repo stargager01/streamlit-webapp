@@ -1,34 +1,65 @@
 # utils.py
 
-# utils.py에 추가할 컴포넌트 함수
-
 import streamlit as st
+from typing import Callable, Iterable, Tuple, Union, Optional
 
-def create_navigation_buttons(prev_step, next_step, validation_func=None):
+def create_navigation_buttons(
+    prev_step: int,
+    next_step: int,
+    validation_func: Optional[Callable[[], Union[bool, Tuple[bool, Iterable[str]]]]] = None,
+) -> None:
     """
-    이전/다음 단계 버튼을 생성하고, 유효성 검사 함수가 있을 경우 이를 통과해야 다음 단계로 이동합니다.
+    공통 네비게이션 버튼(이전/다음)을 렌더링하고 단계 전환을 처리합니다.
 
-    Parameters:
-    - prev_step (int): 이전 단계 번호
-    - next_step (int): 다음 단계 번호
-    - validation_func (callable, optional): 유효성 검사 함수. True를 반환해야 다음 단계로 이동함.
+    Parameters
+    ----------
+    prev_step : int
+        '이전 단계' 버튼 클릭 시 이동할 단계 번호.
+    next_step : int
+        '다음 단계로 이동' 버튼 클릭 시 이동할 단계 번호.
+    validation_func : Optional[Callable[[], Union[bool, Tuple[bool, Iterable[str]]]]]
+        (선택) 유효성 검사 콜백.
+        - 반환값이 bool 인 경우: True 면 다음 단계로 이동, False 면 이동하지 않음.
+        - 반환값이 (is_valid, messages) 튜플인 경우:
+            * is_valid: bool
+            * messages: Iterable[str] — 유효성 실패 시 경고로 표시할 메시지들.
+
+    Notes
+    -----
+    - 이 함수는 내부에서 st.rerun() 을 호출하여 즉시 UI 를 갱신합니다.
+    - validation_func 내부에서 직접 경고/오류 표시를 수행해도 됩니다.
+      이 함수는 (bool, messages) 형태를 추가로 지원하여 메시지를 자동 표시할 수 있습니다.
     """
-    col1, col2 = st.columns(2)
+    col_prev, col_next = st.columns(2)
 
-    with col1:
+    with col_prev:
         if st.button("이전 단계"):
             st.session_state.step = prev_step
-            st.session_state.validation_errors = {}
             st.rerun()
 
-    with col2:
+    with col_next:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.validation_errors = {}
+            is_valid = True
+            messages = None
 
-            # 유효성 검사 함수가 있으면 실행
-            if validation_func is None or validation_func():
+            if validation_func is not None:
+                result = validation_func()
+                if isinstance(result, tuple) and len(result) >= 1:
+                    # (bool, messages) 형태 지원
+                    is_valid = bool(result[0])
+                    if len(result) > 1:
+                        messages = result[1]
+                else:
+                    is_valid = bool(result)
+
+            if is_valid:
                 st.session_state.step = next_step
                 st.rerun()
+            else:
+                # 메시지가 제공되면 경고로 출력
+                if messages:
+                    for msg in messages:
+                        st.warning(msg)
 
 
 # 🔄 단계 이동 함수
