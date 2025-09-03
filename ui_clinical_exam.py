@@ -1,5 +1,5 @@
- import streamlit as st
-from utils import create_navigation_buttons
+import streamlit as st
+from utilsimport create_navigation_buttons
 
 
 def render_step_7_habits():

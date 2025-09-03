@@ -1,4 +1,4 @@
- import streamlit as st
+import streamlit as st
 import os
 import datetime
 from utils import sync_widget_key, sync_multiple_keys, create_navigation_buttons
