@@ -12,7 +12,7 @@ def sync_widget_key_with_auto_save(widget_key, target_key):
     if widget_key in st.session_state:
         st.session_state[target_key] = st.session_state[widget_key]
         # 자동 저장
-        session_manager.save_session()
+        save_session()
         
 def save_session():
     """
@@ -745,7 +745,7 @@ elif st.session_state.step == 2:
         if st.button("이전 단계"):
             # 현재 입력 내용 저장 후 이동
             sync_multiple_keys(field_mapping)
-            session_manager.save_session()
+            save_session()
             st.session_state.step = 1
             st.rerun()
 
@@ -753,7 +753,7 @@ elif st.session_state.step == 2:
         if st.button("다음 단계로 이동 👉"):
             # 강제 복사 및 저장
             sync_multiple_keys(field_mapping)
-            session_manager.save_session()
+            save_session()
 
             # 입력값 검증
             complaint = st.session_state.get("chief_complaint")
