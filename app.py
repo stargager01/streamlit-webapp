@@ -664,20 +664,26 @@ elif st.session_state.step == 2:
     with st.container(border=True):
         st.markdown("**이번에 병원을 방문한 주된 이유는 무엇인가요?**")
         
- 
-        complaint_options = ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱관절 소리/잠김", "턱 움직임 관련 두통", "기타 불편한 증상", "선택 안 함"]
+        complaint_options = [
+            "턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", 
+            "턱관절 소리/잠김", 
+            "턱 움직임 관련 두통", 
+            "기타 불편한 증상", 
+            "선택 안 함"
+        ]
+        # 👇 [수정] .get()의 기본값을 '' -> "선택 안 함"으로 변경
         complaint_index = complaint_options.index(st.session_state.get("chief_complaint_widget", "선택 안 함"))
         
         st.radio(
             label="주 호소",
             options=complaint_options,
             key="chief_complaint_widget",
-            index=complaint_index, 
+            index=complaint_index,
             label_visibility="collapsed",
             on_change=sync_widget_key, args=("chief_complaint_widget", "chief_complaint") # on_change는 유지
-
         )
 
+        # 👇 [수정] get의 대상 키를 chief_complaint_widget -> chief_complaint로 변경
         if st.session_state.get("chief_complaint") == "기타 불편한 증상":
             st.text_input(
                 "기타 사유를 적어주세요:",
@@ -689,12 +695,13 @@ elif st.session_state.step == 2:
         st.markdown("---")
         st.markdown("**문제가 처음 발생한 시기가 어떻게 되나요?**")
         onset_options = ["일주일 이내", "1개월 이내", "6개월 이내", "1년 이내", "1년 이상 전", "선택 안 함"]
+        # 👇 [수정] .get()의 기본값을 '' -> "선택 안 함"으로 변경
         onset_index = onset_options.index(st.session_state.get("onset_widget", "선택 안 함"))
 
         st.radio(
             label="문제 발생 시기",
             options=onset_options,
-            index=onset_index, 
+            index=onset_index,
             key="onset_widget",
             label_visibility="collapsed",
             on_change=sync_widget_key, args=("onset_widget", "onset")
