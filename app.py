@@ -125,12 +125,30 @@ import datetime
 
 
 # 세션 관리 모듈 import
-import session_manager
+#import session_manager
 
 # 앱 시작 시 저장된 세션 자동 불러오기
-if session_manager.has_saved_session():
-    session_manager.load_session()
+#if session_manager.has_saved_session():
+#    session_manager.load_session()
+# ---------------------------
+# 세션 상태 초기화 및 로드
+# ---------------------------
+if "initialized" not in st.session_state:
+    # 앱이 완전히 처음 시작되었을 때만 세션을 불러옵니다.
+    load_session()
+    st.session_state.initialized = True
 
+# step 키가 없을 경우 (예: 새로 시작) 0으로 설정합니다.
+if "step" not in st.session_state:
+    st.session_state.step = 0
+    
+# validation_errors 키가 없을 경우 초기화합니다.
+if "validation_errors" not in st.session_state:
+    st.session_state.validation_errors = {}
+
+for key, default in diagnosis_keys.items():
+    st.session_state.setdefault(key, default)
+    
 
 total_steps = 20
 final_step = total_steps - 1
@@ -152,14 +170,14 @@ diagnosis_keys = {
 }
 
 
-if 'step' not in st.session_state:
-    st.session_state.step = 0
-    st.session_state.validation_errors = {}
+#if 'step' not in st.session_state:
+#    st.session_state.step = 0
+#    st.session_state.validation_errors = {}
 
 
-for key, default in diagnosis_keys.items():
-    if key not in st.session_state:
-        st.session_state[key] = default
+#for key, default in diagnosis_keys.items():
+#    if key not in st.session_state:
+#        st.session_state[key] = default
 
 
 
