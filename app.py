@@ -1280,12 +1280,17 @@ elif st.session_state.step == 6:
 
             st.markdown("**두통 빈도는 얼마나 자주 발생하나요?**")
             headache_freq_opts = ["주 1~2회", "주 3~4회", "주 5~6회", "매일", "선택 안 함"]
-
+            try:
+                current_freq_index = freq_opts.index(st.session_state.get("frequency_choice","선택 안함"))
+            except ValueError:
+                current_freq_index =4
+                
             st.radio(
-                "", headache_freq_opts,
-                index=headache_freq_opts.index(st.session_state.get("headache_frequency", "선택 안 함")),
-                key="headache_frequency_widget",
-                on_change=update_headache_frequency
+                 "", freq_opts,
+                index=current_freq_index,  # <--- 동적으로 계산된 인덱스를 사용하도록 수정했습니다.
+                key="frequency_choice_widget",
+                on_change=sync_widget_key,
+                args=("frequency_choice_widget", "frequency_choice")
             )
             
             st.markdown("**두통을 유발하거나 악화시키는 요인이 있나요? (복수 선택 가능)**")
