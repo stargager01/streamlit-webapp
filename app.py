@@ -29,17 +29,6 @@ def save_session():
         # 습관 리스트 변환
         if isinstance(st.session_state.get("selected_habits"), list):
             st.session_state["additional_habits"] = ", ".join(st.session_state["selected_habits"]) if st.session_state["selected_habits"] else "없음"
-
-        # 주 호소
-         field_mapping = {
-            "chief_complaint_widget": "chief_complaint",
-            "chief_complaint_other_widget": "chief_complaint_other",
-            "onset_widget": "onset"
-        }
-        sync_multiple_keys(field_mapping)
-        save_session()
-
-         
             
         # JSON 문자열로 변환
         json_data = json.dumps(session_data, ensure_ascii=False)
