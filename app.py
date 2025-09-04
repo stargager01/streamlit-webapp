@@ -5,6 +5,15 @@ from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 import datetime
 
+# 👇 [추가] session_manager의 함수들을 모두 import 합니다.
+from session_manager import save_session, load_session, delete_session, has_saved_session
+
+# ---------------------------
+# 세션 로드 (가장 먼저 실행)
+# ---------------------------
+if "step" not in st.session_state:
+    # 👇 [수정] 앱이 처음 로드될 때만 load_session()을 호출합니다.
+    load_session()
 
 total_steps = 20
 final_step = total_steps - 1
@@ -2376,6 +2385,23 @@ elif st.session_state.step == 19:
             del st.session_state[key]
         st.rerun()
 
+# ---------------------------
+# 사이드바에 세션 관리 버튼 추가
+# ---------------------------
+st.sidebar.header("📝 문진 관리")
+
+if st.sidebar.button("지금까지 내용 저장하기"):
+    if save_session():
+        st.sidebar.success("현재 진행 상황이 브라우저에 저장되었습니다.")
+
+# 👇 [개선] 저장된 세션이 있을 때만 '새로 시작' 버튼을 보여줍니다.
+if has_saved_session():
+    if st.sidebar.button("처음부터 새로 시작 (저장 내용 삭제)"):
+        delete_session()
+        # 현재 세션 상태도 깨끗하게 비우고 새로고침합니다.
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
 
 import datetime
