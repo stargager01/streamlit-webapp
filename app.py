@@ -316,6 +316,20 @@ def reset_headache_details():
         for key in keys_to_reset:
             if key in st.session_state:
                 del st.session_state[key]
+
+# --- 콜백: 추가 증상 '없음' 처리 ---
+def update_additional_none():
+    # '없음' 체크 시 나머지 선택 해제
+    if st.session_state.get('additional_none', False):
+        for k in ('eye_pain', 'nose_pain', 'throat_pain'):
+            st.session_state[k] = False
+
+# --- 콜백: 추가 증상 개별 항목 처리 ---
+def update_additional_symptom(symptom_key: str):
+    # 개별 항목 체크 시 '없음' 해제
+    if st.session_state.get(symptom_key, False):
+        st.session_state['additional_none'] = False
+
 # ---------------------------------------------
 
 # 총 단계 수 (0부터 시작)
@@ -324,8 +338,8 @@ total_steps = 20
 st.sidebar.markdown("# 시스템 정보")
 st.sidebar.info("이 시스템은 턱관절 건강 자가 점검을 돕기 위해 개발되었습니다. 제공되는 정보는 참고용이며, 의료 진단을 대체할 수 없습니다.")
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"**현재 단계: {st.session_state.step + 1}/{total_steps + 1}**")
-st.sidebar.progress((st.session_state.step + 1) / (total_steps + 1))
+st.sidebar.markdown(f"**현재 단계: {st.session_state.step + 1}/{total_steps}**")
+st.sidebar.progress((st.session_state.step + 1) / (total_steps))
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ❓ FAQ")
 with st.sidebar.expander("턱관절 질환이란?"):
@@ -1607,7 +1621,6 @@ elif st.session_state.step == 11:
         )
         st.markdown("### 의료진 촉진 소견")
 
-        # 입력 필드 정의: (라벨 표시, 위젯 키, 세션 키)
         palpation_fields = [
             ("측두근 촉진 소견", "palpation_temporalis_widget", "palpation_temporalis"),
             ("내측 익돌근 촉진 소견", "palpation_medial_pterygoid_widget", "palpation_medial_pterygoid"),
@@ -1615,17 +1628,42 @@ elif st.session_state.step == 11:
             ("통증 위치 매핑 (지도 또는 상세 설명)", "pain_mapping_widget", "pain_mapping"),
         ]
 
-        for label, widget_key, session_key in palpation_fields:
+        image_files_in_order = ["temporalis.jpg", "medial.jpg", "lateral.jpg"]
+
+        for idx, (label, widget_key, session_key) in enumerate(palpation_fields):
             st.markdown(f"**{label}**")
-            st.text_area(
-                label=label,
-                key=widget_key,
-                value=st.session_state.get(session_key, ""),
-                on_change=sync_widget_key,
-                args=(widget_key, session_key),
-                placeholder="검사가 필요한 항목입니다.",
-                label_visibility="collapsed"
-            )
+
+            if idx < len(image_files_in_order):
+                # 1~3번째: 사진 + 가로 배치
+                col1, col2 = st.columns([1, 2])
+
+                with col1:
+                    img_path = os.path.join(script_dir, image_files_in_order[idx])
+                    if os.path.exists(img_path):
+                        st.image(img_path, width=300)
+
+                with col2:
+                    st.text_area(
+                        label=label,
+                        key=widget_key,
+                        value=st.session_state.get(session_key, ""),
+                        on_change=sync_widget_key,
+                        args=(widget_key, session_key),
+                        placeholder="검사가 필요한 항목입니다.",
+                        label_visibility="collapsed",
+                        height=300  # 사진과 높이 맞춤
+                    )
+            else:
+                # 마지막: 기본 입력창만
+                st.text_area(
+                    label=label,
+                    key=widget_key,
+                    value=st.session_state.get(session_key, ""),
+                    on_change=sync_widget_key,
+                    args=(widget_key, session_key),
+                    placeholder="검사가 필요한 항목입니다.",
+                    label_visibility="collapsed"
+                )
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -1637,7 +1675,6 @@ elif st.session_state.step == 11:
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            # 위젯 → 세션 키 복사
             sync_multiple_keys({
                 "palpation_temporalis_widget": "palpation_temporalis",
                 "palpation_medial_pterygoid_widget": "palpation_medial_pterygoid",
@@ -1646,6 +1683,7 @@ elif st.session_state.step == 11:
             })
             st.session_state.step = 12
             st.rerun()
+
 
 # STEP 12: 귀 관련 증상
 elif st.session_state.step == 12:
@@ -1775,14 +1813,60 @@ elif st.session_state.step == 13:
             "뻣뻣함(강직감)": st.session_state.get('stiffness', False),
         }
 
+
+
+
     st.markdown("---")
     with st.container(border=True):
         st.markdown("**다음 중 해당되는 증상이 있다면 모두 선택해주세요. (복수 선택 가능)**")
+
+        # '없음' 체크박스
+        st.checkbox(
+            "없음",
+            value=st.session_state.get('additional_none', False),
+            key="additional_none",
+            on_change=update_additional_none
+        )
+
+        # '없음'이 체크되면 나머지 항목 disabled
+        disabled_additional = st.session_state.get('additional_none', False)
+
+        st.checkbox(
+            "눈 통증",
+            value=st.session_state.get('eye_pain', False),
+            key="eye_pain",
+            on_change=update_additional_symptom,
+            args=("eye_pain",),
+            disabled=disabled_additional
+        )
+        st.checkbox(
+            "코 통증",
+            value=st.session_state.get('nose_pain', False),
+            key="nose_pain",
+            on_change=update_additional_symptom,
+            args=("nose_pain",),
+            disabled=disabled_additional
+        )
+        st.checkbox(
+            "목구멍 통증",
+            value=st.session_state.get('throat_pain', False),
+            key="throat_pain",
+            on_change=update_additional_symptom,
+            args=("throat_pain",),
+            disabled=disabled_additional
+        )
+
+        # 요약 저장 (없음 포함)
         st.session_state.additional_symptoms = {
-            "눈 통증": st.checkbox("눈 통증", key="eye_pain"),
-            "코 통증": st.checkbox("코 통증", key="nose_pain"),
-            "목구멍 통증": st.checkbox("목구멍 통증", key="throat_pain"),
+            "없음": st.session_state.get('additional_none', False),
+            "눈 통증": st.session_state.get('eye_pain', False),
+            "코 통증": st.session_state.get('nose_pain', False),
+            "목구멍 통증": st.session_state.get('throat_pain', False),
         }
+
+
+
+
 
     st.markdown("---")
     with st.container(border=True):
