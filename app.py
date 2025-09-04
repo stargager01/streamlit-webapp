@@ -51,6 +51,19 @@ def save_session():
                 session_data[key] = value.strftime("%Y-%m-%d")
 
  
+        # neck_shoulder_symptoms 변환
+        if isinstance(session_data.get("neck_shoulder_symptoms"), dict):
+            selected = [k for k, v in session_data["neck_shoulder_symptoms"].items() if v]
+            session_data["neck_shoulder_symptoms"] = ", ".join(selected) if selected else "없음"
+
+        # 습관 리스트 변환
+        if isinstance(st.session_state.get("selected_habits"), list):
+            st.session_state["additional_habits"] = ", ".join(st.session_state["selected_habits"]) if st.session_state["selected_habits"] else "없음"
+
+       # 현재증상
+        if isinstance(st.session_state.get("selected_times"), list):
+            st.session_state["selected_times"] = ", ".join(st.session_state["selected_times"])
+            
         # JSON 문자열로 변환
         json_data = json.dumps(session_data, ensure_ascii=False)
  
@@ -89,7 +102,17 @@ def load_session():
                     # 변환 실패 시 원래 값 유지
                     pass
 
- 
+         # neck_shoulder_symptoms 복원
+        val = session_data.get("neck_shoulder_symptoms", "")
+        if isinstance(val, str):
+            items = [item.strip() for item in val.split(",")] if val != "없음" else []
+            symptom_keys = ["neck_pain", "shoulder_pain", "stiffness"]  # 실제 사용 중인 키 목록
+            session_data["neck_shoulder_symptoms"] = {k: k in items for k in symptom_keys}
+
+        # 복원 시 selected_habits 문자열 → 리스트
+        val = session_data.get("additional_habits", "")
+        if isinstance(val, str):
+            session_data["selected_habits"] = [v.strip() for v in val.split(",")] if val != "없음" else []
 
         # st.session_state 업데이트 (기존 내용을 덮어쓰지 않고 업데이트)
         st.session_state.update(session_data)
