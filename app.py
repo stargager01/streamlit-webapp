@@ -63,6 +63,11 @@ def save_session():
         if isinstance(st.session_state.get("selected_times"), list):
             st.session_state["selected_times"] = ", ".join(st.session_state["selected_times"])
  
+        #경추관련
+        if isinstance(st.session_state.get("neck_shoulder_symptoms"), dict):
+            selected = [k for k, v in st.session_state["neck_shoulder_symptoms"].items() if v]
+            st.session_state["neck_shoulder_symptoms"] = ", ".join(selected) if selected else "없음"
+
  
         # JSON 문자열로 변환
         json_data = json.dumps(session_data, ensure_ascii=False)
@@ -114,7 +119,13 @@ def load_session():
         if isinstance(val, str):
             session_data["selected_habits"] = [v.strip() for v in val.split(",")] if val != "없음" else []
 
- 
+        #경추관련
+        val = session_data.get("neck_shoulder_symptoms", "")
+        if isinstance(val, str):
+            items = [item.strip() for item in val.split(",")] if val != "없음" else []
+            symptom_keys = ["neck_pain", "shoulder_pain", "stiffness", "limited_mobility", "radiating_pain"]
+            session_data["neck_shoulder_symptoms"] = {k: k in items for k in symptom_keys}
+
 
         # st.session_state 업데이트 (기존 내용을 덮어쓰지 않고 업데이트)
         st.session_state.update(session_data)
