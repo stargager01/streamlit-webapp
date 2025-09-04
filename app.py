@@ -2040,7 +2040,7 @@ elif st.session_state.step == 13:
             }
             
             # 자동 저장
-            session_manager.save_session()
+            save_session()
 
         # '없음' 체크박스
         st.checkbox(
@@ -2092,7 +2092,7 @@ elif st.session_state.step == 13:
             }
             
             # 자동 저장
-            session_manager.save_session()
+            save_session()
 
         # '없음' 체크박스
         st.checkbox(
@@ -2148,14 +2148,14 @@ elif st.session_state.step == 13:
     with col1:
         if st.button("이전 단계"):
             # 현재 입력 내용 저장 후 이동
-            session_manager.save_session()
+            save_session()
             st.session_state.step = 12
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
             # 최종 저장
-            session_manager.save_session()
+            save_session()
             
             # 유효성 검사
             errors = []
