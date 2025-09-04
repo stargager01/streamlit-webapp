@@ -1,6 +1,5 @@
 import streamlit as st
-###
-import streamlit as st
+### 
 import json
 import datetime
 from streamlit_local_storage import LocalStorage
@@ -87,6 +86,7 @@ def has_saved_session():
     except:
         return False
 ###
+ 
 
 
 
@@ -96,20 +96,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 import datetime
 
-# 👇 [추가] session_manager의 함수들을 모두 import 합니다.
-#from session_manager import save_session, load_session, delete_session, has_saved_session
-#import session_manager as sm
 
-#sm.save_session()
-#sm.load_session()
-#sm.delete_session()
-
-# ---------------------------
-# 세션 로드 (가장 먼저 실행)
-# ---------------------------
-if "step" not in st.session_state:
-    # 👇 [수정] 앱이 처음 로드될 때만 load_session()을 호출합니다.
-    load_session()
 
 total_steps = 20
 final_step = total_steps - 1
@@ -130,9 +117,31 @@ diagnosis_keys = {
     "tmj_sound_value": "선택 안 함"
 }
 
-if 'step' not in st.session_state:
+#if 'step' not in st.session_state:
+#    st.session_state.step = 0
+#    st.session_state.validation_errors = {}
+# ---------------------------
+# 세션 로드 (가장 먼저 실행)
+# ---------------------------
+
+if "initialized" not in st.session_state:
+    # 앱이 완전히 처음 시작되었을 때만 세션을 불러옵니다.
+    load_session()
+    st.session_state.initialized = True
+
+# step 키가 없을 경우 (예: 새로 시작) 0으로 설정합니다.
+if "step" not in st.session_state:
     st.session_state.step = 0
+    
+# validation_errors 키가 없을 경우 초기화합니다.
+if "validation_errors" not in st.session_state:
     st.session_state.validation_errors = {}
+
+for key, default in diagnosis_keys.items():
+    st.session_state.setdefault(key, default)
+# ---------------------------
+# 세션 상태 초기화 및 로드
+# ---------------------------
 
 for key, default in diagnosis_keys.items():
     if key not in st.session_state:
@@ -2497,7 +2506,9 @@ if has_saved_session():
         # 현재 세션 상태도 깨끗하게 비우고 새로고침합니다.
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.rerun()
+        # 3. step을 0으로 명확하게 지정하고 새로고침
+        st.session_state.step = 0
+        st.rerun() 
 
 
 import datetime
