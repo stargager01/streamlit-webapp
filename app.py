@@ -13,7 +13,7 @@ def sync_time_widget_with_auto_save(time_key):
     state_key = f"time_{time_key}"
     if widget_key in st.session_state:
         st.session_state[state_key] = st.session_state[widget_key]
-        session_manager.save_session()
+        save_session()
 
 def handle_headache_change():
     """두통 여부 변경 처리 및 자동 저장"""
@@ -27,7 +27,7 @@ def handle_headache_change():
         for key in keys_to_reset:
             if key in st.session_state:
                 del st.session_state[key]
-    session_manager.save_session()
+    save_session()
     
 def sync_widget_key_with_auto_save(widget_key, target_key):
     """위젯 값을 세션에 동기화하고 자동 저장"""
@@ -1361,7 +1361,7 @@ elif st.session_state.step == 6:
         if st.button("이전 단계(주호소 질문으로)"):
             # 현재 입력 내용 저장 후 이동
             sync_multiple_keys(widget_map)
-            session_manager.save_session()
+            save_session()
             st.session_state.step = 2
             st.rerun()
 
@@ -1369,7 +1369,7 @@ elif st.session_state.step == 6:
         if st.button("다음 단계로 이동 👉"):
             # 강제 복사 및 저장
             sync_multiple_keys(widget_map)
-            session_manager.save_session()
+            save_session()
 
             errors = []
 
