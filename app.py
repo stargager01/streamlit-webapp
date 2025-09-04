@@ -7,6 +7,13 @@ from streamlit_local_storage import LocalStorage
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
 
+def sync_widget_key_with_auto_save(widget_key, target_key):
+    """위젯 값을 세션에 동기화하고 자동 저장"""
+    if widget_key in st.session_state:
+        st.session_state[target_key] = st.session_state[widget_key]
+        # 자동 저장
+        session_manager.save_session()
+        
 def save_session():
     """
     현재 st.session_state의 모든 내용을 localStorage에 저장
@@ -660,79 +667,120 @@ elif st.session_state.step == 2:
         "chief_complaint_widget": "chief_complaint",
         "chief_complaint_other_widget": "chief_complaint_other",
         "onset_widget": "onset"
-    } 
+    }
+
+    # 디버깅용 정보 (문제 해결 후 제거 가능)
+    with st.expander("🔍 현재 저장된 정보 확인"):
+        st.write(f"주 호소: {st.session_state.get('chief_complaint', '선택되지 않음')}")
+        st.write(f"기타 사유: {st.session_state.get('chief_complaint_other', '입력되지 않음')}")
+        st.write(f"발생 시기: {st.session_state.get('onset', '선택되지 않음')}")
 
     with st.container(border=True):
         st.markdown("**이번에 병원을 방문한 주된 이유는 무엇인가요?**")
         
+        # 현재 선택된 값을 안전하게 가져오기
+        current_complaint = st.session_state.get("chief_complaint", "선택 안 함")
         complaint_options = [
-            "턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", 
-            "턱관절 소리/잠김", 
-            "턱 움직임 관련 두통", 
-            "기타 불편한 증상", 
+            "턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)",
+            "턱관절 소리/잠김",
+            "턱 움직임 관련 두통",
+            "기타 불편한 증상",
             "선택 안 함"
         ]
-        # 👇 [수정] .get()의 기본값을 '' -> "선택 안 함"으로 변경
-        complaint_index = complaint_options.index(st.session_state.get("chief_complaint_widget", "선택 안 함"))
+        
+        # 안전한 인덱스 계산
+        try:
+            complaint_index = complaint_options.index(current_complaint)
+        except ValueError:
+            complaint_index = 4  # "선택 안 함"의 인덱스
         
         st.radio(
-            label="주 호소",
+            label="",
             options=complaint_options,
             key="chief_complaint_widget",
             index=complaint_index,
             label_visibility="collapsed",
-            on_change=sync_widget_key, args=("chief_complaint_widget", "chief_complaint") # on_change는 유지
+            on_change=lambda: sync_widget_key_with_auto_save("chief_complaint_widget", "chief_complaint")
         )
 
-        # 👇 [수정] get의 대상 키를 chief_complaint_widget -> chief_complaint로 변경
+        # 기타 증상 입력 필드 (조건부 렌더링 개선)
         if st.session_state.get("chief_complaint") == "기타 불편한 증상":
             st.text_input(
                 "기타 사유를 적어주세요:",
                 key="chief_complaint_other_widget",
                 value=st.session_state.get("chief_complaint_other", ""),
-                on_change=sync_widget_key, args=("chief_complaint_other_widget", "chief_complaint_other")
+                placeholder="구체적인 증상이나 불편함을 설명해주세요",
+                on_change=lambda: sync_widget_key_with_auto_save("chief_complaint_other_widget", "chief_complaint_other")
             )
+        # else 블록 제거 - 기존 값을 보존
 
         st.markdown("---")
         st.markdown("**문제가 처음 발생한 시기가 어떻게 되나요?**")
-        onset_options = ["일주일 이내", "1개월 이내", "6개월 이내", "1년 이내", "1년 이상 전", "선택 안 함"]
-        # 👇 [수정] .get()의 기본값을 '' -> "선택 안 함"으로 변경
-        onset_index = onset_options.index(st.session_state.get("onset_widget", "선택 안 함"))
-
+        
+        # 현재 선택된 발생 시기를 안전하게 가져오기
+        current_onset = st.session_state.get("onset", "선택 안 함")
+        onset_options = [
+            "일주일 이내", "1개월 이내", "6개월 이내", "1년 이내", "1년 이상 전", "선택 안 함"
+        ]
+        
+        # 안전한 인덱스 계산
+        try:
+            onset_index = onset_options.index(current_onset)
+        except ValueError:
+            onset_index = 5  # "선택 안 함"의 인덱스
+            
         st.radio(
-            label="문제 발생 시기",
+            label="",
             options=onset_options,
             index=onset_index,
             key="onset_widget",
             label_visibility="collapsed",
-            on_change=sync_widget_key, args=("onset_widget", "onset")
+            on_change=lambda: sync_widget_key_with_auto_save("onset_widget", "onset")
         )
-    
 
     st.markdown("---")
     col1, col2 = st.columns(2)
 
     with col1:
         if st.button("이전 단계"):
+            # 현재 입력 내용 저장 후 이동
+            sync_multiple_keys(field_mapping)
+            session_manager.save_session()
             st.session_state.step = 1
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            # 강제 복사 (혹시 on_change가 호출되지 않은 경우 대비)
+            # 강제 복사 및 저장
             sync_multiple_keys(field_mapping)
+            session_manager.save_session()
 
+            # 입력값 검증
             complaint = st.session_state.get("chief_complaint")
             other_text = st.session_state.get("chief_complaint_other", "").strip()
             onset_selected = st.session_state.get("onset")
 
+            # 유효성 검사
+            validation_errors = []
+            
             if complaint == "선택 안 함":
-                st.warning("주 호소 항목을 선택해주세요.")
+                validation_errors.append("주 호소 항목을 선택해주세요.")
             elif complaint == "기타 불편한 증상" and not other_text:
-                st.warning("기타 증상을 입력해주세요.")
-            elif onset_selected == "선택 안 함":
-                st.warning("문제 발생 시기를 선택해주세요.")
+                validation_errors.append("기타 증상을 구체적으로 입력해주세요.")
+            
+            if onset_selected == "선택 안 함":
+                validation_errors.append("문제 발생 시기를 선택해주세요.")
+
+            # 검증 결과에 따른 처리
+            if validation_errors:
+                for error in validation_errors:
+                    st.error(error)
+                st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
             else:
+                # 성공 메시지 및 단계 이동
+                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
+                
+                # 주호소에 따른 단계 분기
                 if complaint in ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱 움직임 관련 두통"]:
                     st.session_state.step = 3
                 elif complaint == "턱관절 소리/잠김":
@@ -741,6 +789,7 @@ elif st.session_state.step == 2:
                     st.session_state.step = 6
 
                 st.rerun()
+
 
 
 # STEP 3: 통증 양상
