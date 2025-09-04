@@ -834,11 +834,16 @@ elif st.session_state.step == 3:
 
     with st.container(border=True):
         st.markdown("**턱을 움직이거나 씹기, 말하기 등의 기능 또는 악습관(이갈이, 턱 괴기 등)으로 인해 통증이 악화되나요?**")
+        try:
+            jaw_aggravation_index=jaw_aggravation_option.index(st.session_state.get("jaw_aggravation","선택 안함"))
+        except ValueError;
+            jaw_aggravation_index=2
+            
         st.radio(
             label="악화 여부",
             options=["예", "아니오", "선택 안 함"],
             key="jaw_aggravation_widget",
-            index=2,
+            index=jaw_aggravation_index,
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("jaw_aggravation_widget", "jaw_aggravation")
@@ -846,11 +851,16 @@ elif st.session_state.step == 3:
 
         st.markdown("---")
         st.markdown("**통증을 어떻게 표현하시겠습니까? (예: 둔함, 날카로움, 욱신거림 등)**")
+        try:
+            pain_quality_index=pain_quality_option.index(st.session_state.get("pain_quality","선택 안함"))
+        except ValueError;
+            pain_quality_index=4
+            
         st.radio(
             label="통증 양상",
             options=["둔함", "날카로움", "욱신거림", "간헐적", "선택 안 함"],
             key="pain_quality_widget",
-            index=4,
+            index=pain_quality_index,
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("pain_quality_widget", "pain_quality")
