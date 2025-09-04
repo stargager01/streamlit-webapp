@@ -36,10 +36,16 @@ def save_session():
         # 습관 리스트 변환
         if isinstance(st.session_state.get("selected_habits"), list):
             st.session_state["additional_habits"] = ", ".join(st.session_state["selected_habits"]) if st.session_state["selected_habits"] else "없음"
-            
+
+       # 현재증상
+        if isinstance(st.session_state.get("selected_times"), list):
+            st.session_state["selected_times"] = ", ".join(st.session_state["selected_times"])
+ 
+ 
         # JSON 문자열로 변환
         json_data = json.dumps(session_data, ensure_ascii=False)
-        
+ 
+
         # localStorage에 저장
         localS.setItem('jaw_analysis_session', json_data)
         
@@ -232,9 +238,9 @@ def generate_filled_pdf():
 
     # ✅ 두통 관련 리스트를 문자열로 변환
     for k in ["headache_areas", "headache_triggers", "headache_reliefs","headache_frequency"]:
-        v = st.session_state.get(k, [])
+        v = st.session_state.get("selected_times", [])
         if isinstance(v, list):
-            st.session_state[k] = ", ".join(v)
+            st.session_state["selected_times"] = ", ".join(v)
 
     # ✅ 귀 관련 선택도 문자열로 변환
     v = st.session_state.get("selected_ear_symptoms", [])
@@ -1344,7 +1350,7 @@ elif st.session_state.step == 6:
             if not time_valid:
                 errors.append("시간대 항목을 입력하거나 선택해주세요.")
             selected_times = [opt['label'] for opt in time_options if st.session_state.get(f"time_{opt['key']}", False)]
-            st.session_state["selected_times"] = ", ".join(selected_times)
+            st.session_state["selected_times"] = selected_times 
 
 
             if errors:
