@@ -50,24 +50,6 @@ def save_session():
             if isinstance(value, datetime.date):
                 session_data[key] = value.strftime("%Y-%m-%d")
 
-        # neck_shoulder_symptoms 변환
-        if isinstance(session_data.get("neck_shoulder_symptoms"), dict):
-            selected = [k for k, v in session_data["neck_shoulder_symptoms"].items() if v]
-            session_data["neck_shoulder_symptoms"] = ", ".join(selected) if selected else "없음"
-
-        # 습관 리스트 변환
-        if isinstance(st.session_state.get("selected_habits"), list):
-            st.session_state["additional_habits"] = ", ".join(st.session_state["selected_habits"]) if st.session_state["selected_habits"] else "없음"
-
-       # 현재증상
-        if isinstance(st.session_state.get("selected_times"), list):
-            st.session_state["selected_times"] = ", ".join(st.session_state["selected_times"])
- 
-        #경추관련
-        if isinstance(st.session_state.get("neck_shoulder_symptoms"), dict):
-            selected = [k for k, v in st.session_state["neck_shoulder_symptoms"].items() if v]
-            st.session_state["neck_shoulder_symptoms"] = ", ".join(selected) if selected else "없음"
-
  
         # JSON 문자열로 변환
         json_data = json.dumps(session_data, ensure_ascii=False)
@@ -107,25 +89,7 @@ def load_session():
                     # 변환 실패 시 원래 값 유지
                     pass
 
-        # neck_shoulder_symptoms 복원
-        val = session_data.get("neck_shoulder_symptoms", "")
-        if isinstance(val, str):
-            items = [item.strip() for item in val.split(",")] if val != "없음" else []
-            symptom_keys = ["neck_pain", "shoulder_pain", "stiffness"]  # 실제 사용 중인 키 목록
-            session_data["neck_shoulder_symptoms"] = {k: k in items for k in symptom_keys}
-
-        # 복원 시 selected_habits 문자열 → 리스트
-        val = session_data.get("additional_habits", "")
-        if isinstance(val, str):
-            session_data["selected_habits"] = [v.strip() for v in val.split(",")] if val != "없음" else []
-
-        #경추관련
-        val = session_data.get("neck_shoulder_symptoms", "")
-        if isinstance(val, str):
-            items = [item.strip() for item in val.split(",")] if val != "없음" else []
-            symptom_keys = ["neck_pain", "shoulder_pain", "stiffness", "limited_mobility", "radiating_pain"]
-            session_data["neck_shoulder_symptoms"] = {k: k in items for k in symptom_keys}
-
+ 
 
         # st.session_state 업데이트 (기존 내용을 덮어쓰지 않고 업데이트)
         st.session_state.update(session_data)
@@ -2039,151 +2003,197 @@ elif st.session_state.step == 13:
     st.title("경추/목/어깨 관련 증상")
     st.markdown("---")
 
+    # 디버깅용 정보 (문제 해결 후 제거 가능)
+    with st.expander("🔍 현재 저장된 정보 확인"):
+        st.write(f"목/어깨 증상: {st.session_state.get('neck_shoulder_symptoms', {})}")
+        st.write(f"추가 증상: {st.session_state.get('additional_symptoms', {})}")
+        st.write(f"목 외상 이력: {st.session_state.get('neck_trauma_radio', '선택되지 않음')}")
+        st.write("개별 증상 상태:")
+        st.write(f"- 목 통증: {st.session_state.get('neck_pain', False)}")
+        st.write(f"- 어깨 통증: {st.session_state.get('shoulder_pain', False)}")
+        st.write(f"- 뻣뻣함: {st.session_state.get('stiffness', False)}")
+        st.write(f"- 없음: {st.session_state.get('neck_none', False)}")
+
     with st.container(border=True):
         st.markdown("**다음 중의 증상이 있으신가요?**")
+
+        # 목/어깨 증상 관리를 위한 개선된 로직
+        def handle_neck_symptoms():
+            """목/어깨 증상 체크박스 상태 관리"""
+            # '없음'이 체크된 경우 다른 모든 증상 해제
+            if st.session_state.get('neck_none', False):
+                st.session_state['neck_pain'] = False
+                st.session_state['shoulder_pain'] = False
+                st.session_state['stiffness'] = False
+            
+            # 다른 증상이 체크된 경우 '없음' 해제
+            if any([st.session_state.get('neck_pain', False), 
+                    st.session_state.get('shoulder_pain', False), 
+                    st.session_state.get('stiffness', False)]):
+                st.session_state['neck_none'] = False
+            
+            # 딕셔너리 형태로 요약 저장
+            st.session_state["neck_shoulder_symptoms"] = {
+                "목 통증": st.session_state.get('neck_pain', False),
+                "어깨 통증": st.session_state.get('shoulder_pain', False),
+                "뻣뻣함(강직감)": st.session_state.get('stiffness', False),
+            }
+            
+            # 자동 저장
+            session_manager.save_session()
 
         # '없음' 체크박스
         st.checkbox(
             "없음",
             value=st.session_state.get('neck_none', False),
             key="neck_none",
-            on_change=update_neck_none
+            on_change=handle_neck_symptoms
         )
 
-        # 개별 증상 체크박스 (없음이 체크된 경우 disabled 처리)
-        st.checkbox(
-            "목 통증",
-            value=st.session_state.get('neck_pain', False),
-            key="neck_pain",
-            on_change=update_neck_symptom,
-            args=("neck_pain",),
-            disabled=st.session_state.get("neck_none", False)
-        )
+        # 개별 증상 체크박스들
+        neck_symptoms = [
+            ("neck_pain", "목 통증"),
+            ("shoulder_pain", "어깨 통증"),
+            ("stiffness", "뻣뻣함(강직감)")
+        ]
 
-        st.checkbox(
-            "어깨 통증",
-            value=st.session_state.get('shoulder_pain', False),
-            key="shoulder_pain",
-            on_change=update_neck_symptom,
-            args=("shoulder_pain",),
-            disabled=st.session_state.get("neck_none", False)
-        )
-
-        st.checkbox(
-            "뻣뻣함(강직감)",
-            value=st.session_state.get('stiffness', False),
-            key="stiffness",
-            on_change=update_neck_symptom,
-            args=("stiffness",),
-            disabled=st.session_state.get("neck_none", False)
-        )
-
-        # 요약 저장
-        st.session_state.neck_shoulder_symptoms = {
-            "목 통증": st.session_state.get('neck_pain', False),
-            "어깨 통증": st.session_state.get('shoulder_pain', False),
-            "뻣뻣함(강직감)": st.session_state.get('stiffness', False),
-        }
-
-
-
+        for key, label in neck_symptoms:
+            st.checkbox(
+                label,
+                value=st.session_state.get(key, False),
+                key=key,
+                disabled=st.session_state.get("neck_none", False),
+                on_change=handle_neck_symptoms
+            )
 
     st.markdown("---")
     with st.container(border=True):
         st.markdown("**다음 중 해당되는 증상이 있다면 모두 선택해주세요. (복수 선택 가능)**")
+
+        def handle_additional_symptoms():
+            """추가 증상 체크박스 상태 관리"""
+            # '없음'이 체크된 경우 다른 모든 증상 해제
+            if st.session_state.get('additional_none', False):
+                for k in ('eye_pain', 'nose_pain', 'throat_pain'):
+                    st.session_state[k] = False
+            
+            # 다른 증상이 체크된 경우 '없음' 해제
+            if any([st.session_state.get('eye_pain', False),
+                    st.session_state.get('nose_pain', False),
+                    st.session_state.get('throat_pain', False)]):
+                st.session_state['additional_none'] = False
+            
+            # 딕셔너리 형태로 요약 저장
+            st.session_state["additional_symptoms"] = {
+                "없음": st.session_state.get('additional_none', False),
+                "눈 통증": st.session_state.get('eye_pain', False),
+                "코 통증": st.session_state.get('nose_pain', False),
+                "목구멍 통증": st.session_state.get('throat_pain', False),
+            }
+            
+            # 자동 저장
+            session_manager.save_session()
 
         # '없음' 체크박스
         st.checkbox(
             "없음",
             value=st.session_state.get('additional_none', False),
             key="additional_none",
-            on_change=update_additional_none
+            on_change=handle_additional_symptoms
         )
 
-        # '없음'이 체크되면 나머지 항목 disabled
+        # 추가 증상 체크박스들
+        additional_symptoms = [
+            ("eye_pain", "눈 통증"),
+            ("nose_pain", "코 통증"), 
+            ("throat_pain", "목구멍 통증")
+        ]
+
         disabled_additional = st.session_state.get('additional_none', False)
 
-        st.checkbox(
-            "눈 통증",
-            value=st.session_state.get('eye_pain', False),
-            key="eye_pain",
-            on_change=update_additional_symptom,
-            args=("eye_pain",),
-            disabled=disabled_additional
-        )
-        st.checkbox(
-            "코 통증",
-            value=st.session_state.get('nose_pain', False),
-            key="nose_pain",
-            on_change=update_additional_symptom,
-            args=("nose_pain",),
-            disabled=disabled_additional
-        )
-        st.checkbox(
-            "목구멍 통증",
-            value=st.session_state.get('throat_pain', False),
-            key="throat_pain",
-            on_change=update_additional_symptom,
-            args=("throat_pain",),
-            disabled=disabled_additional
-        )
-
-        # 요약 저장 (없음 포함)
-        st.session_state.additional_symptoms = {
-            "없음": st.session_state.get('additional_none', False),
-            "눈 통증": st.session_state.get('eye_pain', False),
-            "코 통증": st.session_state.get('nose_pain', False),
-            "목구멍 통증": st.session_state.get('throat_pain', False),
-        }
-
-
-
-
+        for key, label in additional_symptoms:
+            st.checkbox(
+                label,
+                value=st.session_state.get(key, False),
+                key=key,
+                disabled=disabled_additional,
+                on_change=handle_additional_symptoms
+            )
 
     st.markdown("---")
     with st.container(border=True):
         st.markdown("**목 외상 관련 이력이 있으신가요?**")
 
+        # 현재 선택된 값을 안전하게 가져오기
+        current_trauma = st.session_state.get('neck_trauma_radio', '선택 안 함')
+        trauma_options = ["예", "아니오", "선택 안 함"]
+        
+        try:
+            trauma_index = trauma_options.index(current_trauma)
+        except ValueError:
+            trauma_index = 2  # "선택 안 함"의 인덱스
+
         st.radio(
             label="",
-            options=["예", "아니오", "선택 안 함"],
-            index=["예", "아니오", "선택 안 함"].index(st.session_state.get('neck_trauma_radio', '선택 안 함')),
-            key="neck_trauma_radio_widget",               # ✅ widget key 로 변경
-            on_change=sync_widget_key,                    # ✅ 콜백 추가
-            args=("neck_trauma_radio_widget", "neck_trauma_radio"),
+            options=trauma_options,
+            index=trauma_index,
+            key="neck_trauma_radio_widget",
+            on_change=lambda: sync_widget_key_with_auto_save("neck_trauma_radio_widget", "neck_trauma_radio"),
             label_visibility="collapsed"
         )
 
-
-       
+    st.markdown("---")
     col1, col2 = st.columns(2)
+    
     with col1:
         if st.button("이전 단계"):
+            # 현재 입력 내용 저장 후 이동
+            session_manager.save_session()
             st.session_state.step = 12
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            trauma_selected = st.session_state.get('neck_trauma_radio') in ["예", "아니오"]
-            symptoms_selected = st.session_state.get('neck_none', False) or \
-                                 st.session_state.get('neck_pain', False) or \
-                                 st.session_state.get('shoulder_pain', False) or \
-                                 st.session_state.get('stiffness', False)
-
-            if st.session_state.get('neck_none', False) and (
-                st.session_state.get('neck_pain', False) or
-                st.session_state.get('shoulder_pain', False) or
+            # 최종 저장
+            session_manager.save_session()
+            
+            # 유효성 검사
+            errors = []
+            
+            # 목/어깨 증상 검사
+            neck_symptoms_selected = any([
+                st.session_state.get('neck_none', False),
+                st.session_state.get('neck_pain', False),
+                st.session_state.get('shoulder_pain', False),
                 st.session_state.get('stiffness', False)
-            ):
-                st.warning("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
-            elif not symptoms_selected:
-                st.warning("증상에서 최소 하나를 선택하거나 '없음'을 체크해주세요.")
-            elif not trauma_selected:
-                st.warning("목 외상 여부를 선택해주세요.")
+            ])
+            
+            if not neck_symptoms_selected:
+                errors.append("목/어깨 증상에서 최소 하나를 선택하거나 '없음'을 체크해주세요.")
+            
+            # 상호 배타적 체크 확인
+            if st.session_state.get('neck_none', False) and any([
+                st.session_state.get('neck_pain', False),
+                st.session_state.get('shoulder_pain', False),
+                st.session_state.get('stiffness', False)
+            ]):
+                errors.append("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
+            
+            # 추가 증상 검사 (선택사항이므로 필수는 아님)
+            
+            # 목 외상 이력 검사
+            if st.session_state.get('neck_trauma_radio') not in ["예", "아니오"]:
+                errors.append("목 외상 관련 이력 여부를 선택해주세요.")
+
+            if errors:
+                for err in errors:
+                    st.error(err)
+                st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
             else:
+                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
                 st.session_state.step = 14
                 st.rerun()
-
+                
 # STEP 14: 정서적 스트레스 이력
 elif st.session_state.step == 14:
     st.title("정서적 스트레스 이력")
