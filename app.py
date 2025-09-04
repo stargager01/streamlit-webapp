@@ -146,8 +146,7 @@ if "step" not in st.session_state:
 if "validation_errors" not in st.session_state:
     st.session_state.validation_errors = {}
 
-for key, default in diagnosis_keys.items():
-    st.session_state.setdefault(key, default)
+
     
 
 total_steps = 20
@@ -174,7 +173,8 @@ diagnosis_keys = {
 #    st.session_state.step = 0
 #    st.session_state.validation_errors = {}
 
-
+for key, default in diagnosis_keys.items():
+    st.session_state.setdefault(key, default)
 #for key, default in diagnosis_keys.items():
 #    if key not in st.session_state:
 #        st.session_state[key] = default
