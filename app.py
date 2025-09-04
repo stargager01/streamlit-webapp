@@ -166,7 +166,7 @@ import datetime
 # ---------------------------
 # 세션 상태 초기화 및 로드
 # ---------------------------
-if "initialized" not in st.session_state:
+if st.session_state.get("step", None) is None:    #if "initialized" not in st.session_state:
     # 앱이 완전히 처음 시작되었을 때만 세션을 불러옵니다.
     load_session()
     st.session_state.initialized = True
@@ -2620,10 +2620,11 @@ elif st.session_state.step == 19:
             st.markdown("---")
     st.info("※ 본 결과는 예비 진단이며, 전문의 상담을 반드시 권장합니다.")
     if st.button("처음으로 돌아가기", use_container_width=True):
-        st.session_state.step = 0
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+        if st.confirm("정말 처음부터 다시 시작하시겠습니까? 기존 입력 내용은 모두 삭제됩니다."):
+            delete_session()   #   st.session_state.step = 0
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
 # ---------------------------
 # 사이드바에 세션 관리 버튼 추가
