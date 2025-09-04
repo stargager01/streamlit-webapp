@@ -653,8 +653,7 @@ elif st.session_state.step == 1:
                 st.session_state.validation_errors['phone'] = "연락처는 필수 입력 항목입니다."
                 mandatory_fields_filled = False
 
-            if mandatory_fields_filled:
-                save_session() 
+            if mandatory_fields_filled: 
                 st.session_state.step = 2
             st.rerun()
 
@@ -744,18 +743,15 @@ elif st.session_state.step == 2:
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("이전 단계"):
-            # 현재 입력 내용 저장 후 이동
-            sync_multiple_keys(field_mapping)
-            save_session()
+        if st.button("이전 단계"): 
             st.session_state.step = 1
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
             # 강제 복사 및 저장
-            sync_multiple_keys(field_mapping)
-            save_session()
+            #sync_multiple_keys(field_mapping)
+            #save_session()
 
             # 입력값 검증
             complaint = st.session_state.get("chief_complaint")
@@ -783,14 +779,11 @@ elif st.session_state.step == 2:
                 st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
                 
                 # 주호소에 따른 단계 분기
-                if complaint in ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱 움직임 관련 두통"]:
-                    save_session() 
+                if complaint in ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱 움직임 관련 두통"]: 
                     st.session_state.step = 3
-                elif complaint == "턱관절 소리/잠김":
-                    save_session() 
+                elif complaint == "턱관절 소리/잠김": 
                     st.session_state.step = 5
-                elif complaint == "기타 불편한 증상":
-                    save_session() 
+                elif complaint == "기타 불편한 증상": 
                     st.session_state.step = 6
 
                 st.rerun()
@@ -866,8 +859,7 @@ elif st.session_state.step == 3:
                 st.warning("악화 여부는 필수 항목입니다. 선택해주세요.")
             elif st.session_state.get("pain_quality") == "선택 안 함":
                 st.warning("통증 양상 항목을 선택해주세요.")
-            else:
-                save_session() 
+            else: 
                 st.session_state.step = 4
                 st.rerun()
 
@@ -1027,8 +1019,7 @@ elif st.session_state.step == 4:
             if errors:
                 for err in errors:
                     st.warning(err)
-            else:
-                save_session() 
+            else: 
                 st.session_state.step = 6
                 st.rerun()
 
@@ -1195,8 +1186,7 @@ elif st.session_state.step == 5:
             if errors:
                 for err in errors:
                     st.warning(err)
-            else:
-                save_session() 
+            else: 
                 st.session_state.step = 6
                 st.rerun()
 
@@ -1352,16 +1342,13 @@ elif st.session_state.step == 6:
     with col1:
         if st.button("이전 단계(주호소 질문으로)"):
             # 현재 입력 내용 저장 후 이동
-            sync_multiple_keys(widget_map)
-            save_session()
+            #sync_multiple_keys(widget_map)
+            #save_session()
             st.session_state.step = 2
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"):
-            # 강제 복사 및 저장
-            sync_multiple_keys(widget_map)
-            save_session()
+        if st.button("다음 단계로 이동 👉"): 
 
             errors = []
 
@@ -1395,8 +1382,7 @@ elif st.session_state.step == 6:
                     st.error(err)
                 st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
             else:
-                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
-                save_session() 
+                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.") 
                 st.session_state.step = 7
                 st.rerun() 
 
@@ -1514,8 +1500,7 @@ elif st.session_state.step == 7:
                 st.session_state.get("habit_none", False)
             ])
 
-            if has_first:
-                save_session() 
+            if has_first: 
                 st.session_state.step = 8
                 st.rerun()
             else:
@@ -1597,8 +1582,7 @@ elif st.session_state.step == 8:
                 "active_pain_widget": "active_pain",
                 "passive_opening_widget": "passive_opening",
                 "passive_pain_widget": "passive_pain"
-            })
-            save_session() 
+            }) 
             st.session_state.step = 9
             st.rerun()
 
@@ -1758,8 +1742,7 @@ elif st.session_state.step == 9:
                 "latero_left_pain_widget": "latero_left_pain",
                 "occlusion_widget": "occlusion",
                 "occlusion_shift_widget": "occlusion_shift"
-            })
-            save_session() 
+            }) 
             st.session_state.step = 10
             st.rerun()
 
@@ -1849,8 +1832,7 @@ elif st.session_state.step == 10:
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"):
-            save_session() 
+        if st.button("다음 단계로 이동 👉"): 
             st.session_state.step = 11
             st.rerun()
 
@@ -1926,8 +1908,7 @@ elif st.session_state.step == 11:
                 "palpation_medial_pterygoid_widget": "palpation_medial_pterygoid",
                 "palpation_lateral_pterygoid_widget": "palpation_lateral_pterygoid",
                 "pain_mapping_widget": "pain_mapping",
-            })
-            save_session() 
+            }) 
             st.session_state.step = 12
             st.rerun()
 
@@ -2005,8 +1986,7 @@ elif st.session_state.step == 12:
                 st.warning("귀 관련 증상을 한 가지 이상 선택하거나 '없음'을 선택해주세요.")
             elif "없음" in symptoms and len(symptoms) > 1:
                 st.warning("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
-            else:
-                save_session() 
+            else: 
                 st.session_state.step = 13
                 st.rerun()
 
@@ -2052,7 +2032,7 @@ elif st.session_state.step == 13:
             }
             
             # 자동 저장
-            save_session()
+            #save_session()
 
         # '없음' 체크박스
         st.checkbox(
@@ -2104,7 +2084,7 @@ elif st.session_state.step == 13:
             }
             
             # 자동 저장
-            save_session()
+            #save_session()
 
         # '없음' 체크박스
         st.checkbox(
@@ -2158,16 +2138,12 @@ elif st.session_state.step == 13:
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("이전 단계"):
-            # 현재 입력 내용 저장 후 이동
-            save_session()
+        if st.button("이전 단계"): 
             st.session_state.step = 12
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"):
-            # 최종 저장
-            save_session()
+        if st.button("다음 단계로 이동 👉"): 
             
             # 유효성 검사
             errors = []
@@ -2202,8 +2178,7 @@ elif st.session_state.step == 13:
                     st.error(err)
                 st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
             else:
-                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
-                save_session() 
+                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.") 
                 st.session_state.step = 14
                 st.rerun()
                 
@@ -2250,8 +2225,7 @@ elif st.session_state.step == 14:
         if st.button("다음 단계로 이동 👉"):
             if st.session_state.get("stress_radio") == "선택 안 함":
                 st.warning("스트레스 여부를 선택해주세요.")
-            else:
-                save_session() 
+            else: 
                 st.session_state.step = 15
                 st.rerun()
 
@@ -2380,8 +2354,7 @@ elif st.session_state.step == 15:
             if errors:
                 for e in errors:
                     st.warning(e)
-            else:
-                save_session() 
+            else: 
                 st.session_state.step = 16
                 st.rerun()
 
@@ -2424,8 +2397,7 @@ elif st.session_state.step == 16:
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"):
-            save_session() 
+        if st.button("다음 단계로 이동 👉"): 
             st.session_state.step = 17
             st.rerun()
 
@@ -2509,8 +2481,7 @@ elif st.session_state.step == 17:
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"):
-            save_session() 
+        if st.button("다음 단계로 이동 👉"): 
             st.session_state.step = 18
             st.rerun()
 
@@ -2633,8 +2604,7 @@ elif st.session_state.step == 18:
             if errors:
                 for err in errors:
                     st.warning(err)
-            else:
-                save_session() 
+            else: 
                 st.session_state.step = 19
                 st.rerun()
 
