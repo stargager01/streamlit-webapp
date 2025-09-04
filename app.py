@@ -672,20 +672,21 @@ elif st.session_state.step == 2:
         "onset_widget": "onset"
     }
     sync_multiple_keys(field_mapping)
-    
+
     with st.container(border=True):
         st.markdown("**이번에 병원을 방문한 주된 이유는 무엇인가요?**")
         
-        # 'index'부분을 수정하여 st.session_state값을 직접 참조하게 만듭니다.
-        complaint_options = ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", 턱관절 소리/잠김","턱 움직임 관련 두통","기타 불편한 증상","선택 안함"]
+        # 'index' 부분을 수정하여 st.session_state의 값을 직접 참조하게 만듭니다.
+        complaint_options = ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱관절 소리/잠김", "턱 움직임 관련 두통", "기타 불편한 증상", "선택 안 함"]
         complaint_index = complaint_options.index(st.session_state.get("chief_complaint", "선택 안 함"))
         
         st.radio(
             label="주 호소",
             options=complaint_options,
             key="chief_complaint_widget",
-            index =complaint_index,
+            index=complaint_index, # 👈 [수정] index 값을 동적으로 설정
             label_visibility="collapsed"
+            # on_change 콜백은 이제 필수가 아니므로 제거하거나 유지해도 괜찮습니다.
         )
 
         if st.session_state.get("chief_complaint") == "기타 불편한 증상":
@@ -694,21 +695,20 @@ elif st.session_state.step == 2:
                 key="chief_complaint_other_widget",
                 value=st.session_state.get("chief_complaint_other", "")
             )
-            
+
         st.markdown("---")
         st.markdown("**문제가 처음 발생한 시기가 어떻게 되나요?**")
-        onset_options = [
-            "일주일 이내", "1개월 이내", "6개월 이내", "1년 이내", "1년 이상 전", "선택 안 함"
-        ]
+        onset_options = ["일주일 이내", "1개월 이내", "6개월 이내", "1년 이내", "1년 이상 전", "선택 안 함"]
         onset_index = onset_options.index(st.session_state.get("onset", "선택 안 함"))
 
         st.radio(
             label="문제 발생 시기",
             options=onset_options,
-            index= onset_index,
+            index=onset_index, # 👈 [수정] index 값을 동적으로 설정
             key="onset_widget",
             label_visibility="collapsed"
         )
+    
 
     st.markdown("---")
     col1, col2 = st.columns(2)
