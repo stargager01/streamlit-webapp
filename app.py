@@ -50,20 +50,7 @@ def save_session():
             if isinstance(value, datetime.date):
                 session_data[key] = value.strftime("%Y-%m-%d")
 
- 
-        # neck_shoulder_symptoms 변환
-        if isinstance(session_data.get("neck_shoulder_symptoms"), dict):
-            selected = [k for k, v in session_data["neck_shoulder_symptoms"].items() if v]
-            session_data["neck_shoulder_symptoms"] = ", ".join(selected) if selected else "없음"
-
-        # 습관 리스트 변환
-        if isinstance(st.session_state.get("selected_habits"), list):
-            st.session_state["additional_habits"] = ", ".join(st.session_state["selected_habits"]) if st.session_state["selected_habits"] else "없음"
-
-       # 현재증상
-        if isinstance(st.session_state.get("selected_times"), list):
-            st.session_state["selected_times"] = ", ".join(st.session_state["selected_times"])
-            
+  
         # JSON 문자열로 변환
         json_data = json.dumps(session_data, ensure_ascii=False)
  
@@ -101,19 +88,7 @@ def load_session():
                 except ValueError:
                     # 변환 실패 시 원래 값 유지
                     pass
-
-         # neck_shoulder_symptoms 복원
-        val = session_data.get("neck_shoulder_symptoms", "")
-        if isinstance(val, str):
-            items = [item.strip() for item in val.split(",")] if val != "없음" else []
-            symptom_keys = ["neck_pain", "shoulder_pain", "stiffness"]  # 실제 사용 중인 키 목록
-            session_data["neck_shoulder_symptoms"] = {k: k in items for k in symptom_keys}
-
-        # 복원 시 selected_habits 문자열 → 리스트
-        val = session_data.get("additional_habits", "")
-        if isinstance(val, str):
-            session_data["selected_habits"] = [v.strip() for v in val.split(",")] if val != "없음" else []
-
+ 
         # st.session_state 업데이트 (기존 내용을 덮어쓰지 않고 업데이트)
         st.session_state.update(session_data)
         
@@ -679,6 +654,7 @@ elif st.session_state.step == 1:
                 mandatory_fields_filled = False
 
             if mandatory_fields_filled:
+                save_session() 
                 st.session_state.step = 2
             st.rerun()
 
@@ -808,10 +784,13 @@ elif st.session_state.step == 2:
                 
                 # 주호소에 따른 단계 분기
                 if complaint in ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱 움직임 관련 두통"]:
+                    save_session() 
                     st.session_state.step = 3
                 elif complaint == "턱관절 소리/잠김":
+                    save_session() 
                     st.session_state.step = 5
                 elif complaint == "기타 불편한 증상":
+                    save_session() 
                     st.session_state.step = 6
 
                 st.rerun()
@@ -888,6 +867,7 @@ elif st.session_state.step == 3:
             elif st.session_state.get("pain_quality") == "선택 안 함":
                 st.warning("통증 양상 항목을 선택해주세요.")
             else:
+                save_session() 
                 st.session_state.step = 4
                 st.rerun()
 
@@ -1048,6 +1028,7 @@ elif st.session_state.step == 4:
                 for err in errors:
                     st.warning(err)
             else:
+                save_session() 
                 st.session_state.step = 6
                 st.rerun()
 
@@ -1215,6 +1196,7 @@ elif st.session_state.step == 5:
                 for err in errors:
                     st.warning(err)
             else:
+                save_session() 
                 st.session_state.step = 6
                 st.rerun()
 
@@ -1414,6 +1396,7 @@ elif st.session_state.step == 6:
                 st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
             else:
                 st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
+                save_session() 
                 st.session_state.step = 7
                 st.rerun() 
 
@@ -1532,6 +1515,7 @@ elif st.session_state.step == 7:
             ])
 
             if has_first:
+                save_session() 
                 st.session_state.step = 8
                 st.rerun()
             else:
@@ -1614,6 +1598,7 @@ elif st.session_state.step == 8:
                 "passive_opening_widget": "passive_opening",
                 "passive_pain_widget": "passive_pain"
             })
+            save_session() 
             st.session_state.step = 9
             st.rerun()
 
@@ -1774,6 +1759,7 @@ elif st.session_state.step == 9:
                 "occlusion_widget": "occlusion",
                 "occlusion_shift_widget": "occlusion_shift"
             })
+            save_session() 
             st.session_state.step = 10
             st.rerun()
 
@@ -1864,6 +1850,7 @@ elif st.session_state.step == 10:
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
+            save_session() 
             st.session_state.step = 11
             st.rerun()
 
@@ -1940,6 +1927,7 @@ elif st.session_state.step == 11:
                 "palpation_lateral_pterygoid_widget": "palpation_lateral_pterygoid",
                 "pain_mapping_widget": "pain_mapping",
             })
+            save_session() 
             st.session_state.step = 12
             st.rerun()
 
@@ -2018,6 +2006,7 @@ elif st.session_state.step == 12:
             elif "없음" in symptoms and len(symptoms) > 1:
                 st.warning("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
             else:
+                save_session() 
                 st.session_state.step = 13
                 st.rerun()
 
@@ -2214,6 +2203,7 @@ elif st.session_state.step == 13:
                 st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
             else:
                 st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
+                save_session() 
                 st.session_state.step = 14
                 st.rerun()
                 
@@ -2261,6 +2251,7 @@ elif st.session_state.step == 14:
             if st.session_state.get("stress_radio") == "선택 안 함":
                 st.warning("스트레스 여부를 선택해주세요.")
             else:
+                save_session() 
                 st.session_state.step = 15
                 st.rerun()
 
@@ -2390,6 +2381,7 @@ elif st.session_state.step == 15:
                 for e in errors:
                     st.warning(e)
             else:
+                save_session() 
                 st.session_state.step = 16
                 st.rerun()
 
@@ -2433,6 +2425,7 @@ elif st.session_state.step == 16:
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
+            save_session() 
             st.session_state.step = 17
             st.rerun()
 
@@ -2517,6 +2510,7 @@ elif st.session_state.step == 17:
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
+            save_session() 
             st.session_state.step = 18
             st.rerun()
 
@@ -2640,6 +2634,7 @@ elif st.session_state.step == 18:
                 for err in errors:
                     st.warning(err)
             else:
+                save_session() 
                 st.session_state.step = 19
                 st.rerun()
 
