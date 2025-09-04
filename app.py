@@ -6,7 +6,12 @@ from io import BytesIO
 import datetime
 
 # 👇 [추가] session_manager의 함수들을 모두 import 합니다.
-from session_manager import save_session, load_session, delete_session, has_saved_session
+#from session_manager import save_session, load_session, delete_session, has_saved_session
+import session_manager as sm
+
+sm.save_session()
+sm.load_session()
+sm.delete_session()
 
 # ---------------------------
 # 세션 로드 (가장 먼저 실행)
