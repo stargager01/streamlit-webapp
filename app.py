@@ -61,6 +61,7 @@ def load_session():
             if key == 'birthdate' and isinstance(value, str):
                 try:
                     # "YYYY-MM-DD" 형식의 문자열을 datetime.date로 변환
+                    value = value.replace("/", "-")
                     session_data[key] = datetime.datetime.strptime(value, "%Y-%m-%d").date()
                 except ValueError:
                     # 변환 실패 시 원래 값 유지
