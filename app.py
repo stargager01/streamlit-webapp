@@ -91,12 +91,30 @@ def save_session():
     return True
 
 def load_session():
-    json_data = localS.getItem("jaw_analysis_session")
-    if not json_data or json_data == "null":
+    try:
+        raw = localS.getItem("jaw_analysis_session")
+        if not raw or raw == "null":
+            return False
+        session_data = json.loads(raw)
+        if "birthdate" in session_data and isinstance(session_data["birthdate"], str):
+            try:
+                session_data["birthdate"] = datetime.datetime.strptime(
+                    session_data["birthdate"], "%Y-%m-%d"
+                ).date()
+            except ValueError:
+                pass
+        st.session_state.update(session_data)
+        return True
+    except Exception as e:
+        st.error(f"세션 불러오기 오류: {e}")
         return False
-    data = json.loads(json_data)
-    st.session_state.update(data)
-    return True
+
+# ← 여기에 빠트리기 쉬운 콜백 함수를 정의합니다!
+def sync_widget_key_with_auto_save(widget_key, target_key):
+    """위젯 값을 st.session_state에 동기화하고 즉시 로컬 저장"""
+    if widget_key in st.session_state:
+        st.session_state[target_key] = st.session_state[widget_key]
+        save_session()
 
 def delete_session():
     """
@@ -1702,6 +1720,8 @@ elif st.session_state.step == 10:
             st.rerun()
 
 
+
+
 # STEP 11: 근육 촉진 평가
 elif st.session_state.step == 11:
     st.title("근육 촉진 평가")
@@ -1714,7 +1734,6 @@ elif st.session_state.step == 11:
         )
         st.markdown("### 의료진 촉진 소견")
 
-        # 입력 필드 정의: (라벨 표시, 위젯 키, 세션 키)
         palpation_fields = [
             ("측두근 촉진 소견", "palpation_temporalis_widget", "palpation_temporalis"),
             ("내측 익돌근 촉진 소견", "palpation_medial_pterygoid_widget", "palpation_medial_pterygoid"),
@@ -1722,17 +1741,42 @@ elif st.session_state.step == 11:
             ("통증 위치 매핑 (지도 또는 상세 설명)", "pain_mapping_widget", "pain_mapping"),
         ]
 
-        for label, widget_key, session_key in palpation_fields:
+        image_files_in_order = ["temporalis.jpg", "medial.jpg", "lateral.jpg"]
+
+        for idx, (label, widget_key, session_key) in enumerate(palpation_fields):
             st.markdown(f"**{label}**")
-            st.text_area(
-                label=label,
-                key=widget_key,
-                value=st.session_state.get(session_key, ""),
-                on_change=sync_widget_key,
-                args=(widget_key, session_key),
-                placeholder="검사가 필요한 항목입니다.",
-                label_visibility="collapsed"
-            )
+
+            if idx < len(image_files_in_order):
+                # 1~3번째: 사진 + 가로 배치
+                col1, col2 = st.columns([1, 2])
+
+                with col1:
+                    img_path = os.path.join(script_dir, image_files_in_order[idx])
+                    if os.path.exists(img_path):
+                        st.image(img_path, width=300)
+
+                with col2:
+                    st.text_area(
+                        label=label,
+                        key=widget_key,
+                        value=st.session_state.get(session_key, ""),
+                        on_change=sync_widget_key,
+                        args=(widget_key, session_key),
+                        placeholder="검사가 필요한 항목입니다.",
+                        label_visibility="collapsed",
+                        height=300  # 사진과 높이 맞춤
+                    )
+            else:
+                # 마지막: 기본 입력창만
+                st.text_area(
+                    label=label,
+                    key=widget_key,
+                    value=st.session_state.get(session_key, ""),
+                    on_change=sync_widget_key,
+                    args=(widget_key, session_key),
+                    placeholder="검사가 필요한 항목입니다.",
+                    label_visibility="collapsed"
+                )
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -1744,13 +1788,12 @@ elif st.session_state.step == 11:
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            # 위젯 → 세션 키 복사
             sync_multiple_keys({
                 "palpation_temporalis_widget": "palpation_temporalis",
                 "palpation_medial_pterygoid_widget": "palpation_medial_pterygoid",
                 "palpation_lateral_pterygoid_widget": "palpation_lateral_pterygoid",
                 "pain_mapping_widget": "pain_mapping",
-            })
+            }) 
             st.session_state.step = 12
             st.rerun()
 
