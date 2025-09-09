@@ -3,14 +3,20 @@ import streamlit as st
 import json
 import datetime
 from streamlit_local_storage import LocalStorage
-# 세션에 ‘확인 모드’ 플래그 초기화
-if "reset_confirm" not in st.session_state:
-    st.session_state.reset_confirm = False
+DATA_KEY = "cervical_symptoms"
+DEFAULT_SYMPTOMS = {
+    '목 통증': False,
+    '어깨 통증': False,
+    '뻣뻣함(강직감)': False,
+    '없음': False,
+    '눈 통증': False,
+    '코 통증': False,
+    '목구멍 통증': False
+}
 
-# 리셋 요청 버튼
-if st.sidebar.button("처음부터 다시 시작", key="btn_request_reset"):
-    st.session_state.reset_confirm = True
-    st.experimental_rerun()
+if DATA_KEY not in st.session_state:
+    st.session_state[DATA_KEY] = DEFAULT_SYMPTOMS.copy()
+
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
 
@@ -2087,7 +2093,7 @@ elif st.session_state.step == 13:
                 st.session_state.step = 14
                 st.rerun()
 
-                
+
 # STEP 14: 정서적 스트레스 이력
 elif st.session_state.step == 14:
     st.title("정서적 스트레스 이력")
