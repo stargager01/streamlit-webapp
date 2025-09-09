@@ -6,6 +6,23 @@ from io import BytesIO
 import datetime
 import json
 
+
+
+
+diagnosis_keys = {
+    "muscle_pressure_2s_value": "선택 안 함",
+    "muscle_referred_pain_value": "선택 안 함",
+    "muscle_referred_remote_pain_value": "선택 안 함", 
+    "tmj_press_pain_value": "선택 안 함",
+    "headache_temples_value": "선택 안 함",
+    "headache_with_jaw_value": "선택 안 함",
+    "headache_reproduce_by_pressure_value": "선택 안 함",
+    "headache_not_elsewhere_value": "선택 안 함",
+    "crepitus_confirmed_value": "선택 안 함",
+    "mao_fits_3fingers_value": "선택 안 함",
+    "jaw_locked_now_value": "선택 안 함",
+    "tmj_sound_value": "선택 안 함"
+}
 ###
 
 if 'step' not in st.session_state:
@@ -24,20 +41,11 @@ total_steps = 20
 final_step = total_steps - 1
 
 
-diagnosis_keys = {
-    "muscle_pressure_2s_value": "선택 안 함",
-    "muscle_referred_pain_value": "선택 안 함",
-    "muscle_referred_remote_pain_value": "선택 안 함", 
-    "tmj_press_pain_value": "선택 안 함",
-    "headache_temples_value": "선택 안 함",
-    "headache_with_jaw_value": "선택 안 함",
-    "headache_reproduce_by_pressure_value": "선택 안 함",
-    "headache_not_elsewhere_value": "선택 안 함",
-    "crepitus_confirmed_value": "선택 안 함",
-    "mao_fits_3fingers_value": "선택 안 함",
-    "jaw_locked_now_value": "선택 안 함",
-    "tmj_sound_value": "선택 안 함"
-}
+# diagnosis_keys 를 session_state 에 심는 루프
+for key, default in diagnosis_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
 
 # STEP 13 전용 키명, DEFAULT 값도 한 번만
 DATA_KEY = "neck_shoulder_symptoms"
