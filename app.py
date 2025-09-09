@@ -4,6 +4,44 @@ import json
 import datetime
 from streamlit_local_storage import LocalStorage
 
+
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
+import datetime
+
+
+
+# 세션 관리 모듈 import
+#import session_manager
+
+# 앱 시작 시 저장된 세션 자동 불러오기
+#if session_manager.has_saved_session():
+#    session_manager.load_session()
+# ---------------------------
+# 세션 상태 초기화 및 로드
+# ---------------------------
+if st.session_state.get("step", None) is None:    #if "initialized" not in st.session_state:
+    # 앱이 완전히 처음 시작되었을 때만 세션을 불러옵니다.
+    load_session()
+    st.session_state.initialized = True
+
+# step 키가 없을 경우 (예: 새로 시작) 0으로 설정합니다.
+if "step" not in st.session_state:
+    st.session_state.step = 0
+    
+# validation_errors 키가 없을 경우 초기화합니다.
+if "validation_errors" not in st.session_state:
+    st.session_state.validation_errors = {}
+
+
+    
+
+total_steps = 20
+final_step = total_steps - 1
+
+
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
 
@@ -120,43 +158,6 @@ def has_saved_session():
 ###
  
 
-
-
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from io import BytesIO
-import datetime
-
-
-
-# 세션 관리 모듈 import
-#import session_manager
-
-# 앱 시작 시 저장된 세션 자동 불러오기
-#if session_manager.has_saved_session():
-#    session_manager.load_session()
-# ---------------------------
-# 세션 상태 초기화 및 로드
-# ---------------------------
-if st.session_state.get("step", None) is None:    #if "initialized" not in st.session_state:
-    # 앱이 완전히 처음 시작되었을 때만 세션을 불러옵니다.
-    load_session()
-    st.session_state.initialized = True
-
-# step 키가 없을 경우 (예: 새로 시작) 0으로 설정합니다.
-if "step" not in st.session_state:
-    st.session_state.step = 0
-    
-# validation_errors 키가 없을 경우 초기화합니다.
-if "validation_errors" not in st.session_state:
-    st.session_state.validation_errors = {}
-
-
-    
-
-total_steps = 20
-final_step = total_steps - 1
 
 
 diagnosis_keys = {
@@ -489,6 +490,13 @@ total_steps = 20
 # --- 사이드바 ---
 st.sidebar.markdown("# 시스템 정보")
 st.sidebar.info("이 시스템은 턱관절 건강 자가 점검을 돕기 위해 개발되었습니다. 제공되는 정보는 참고용이며, 의료 진단을 대체할 수 없습니다.")
+if "reset_confirm" not in st.session_state:
+    st.session_state.reset_confirm = False
+
+if st.sidebar.button("🔄 처음부터 다시 시작", key="btn_request_reset"):
+    st.session_state.reset_confirm = True
+    st.experimental_rerun()
+
 st.sidebar.markdown("### 📂 세션 불러오기")
 if st.sidebar.button("불러오기", key="btn_load_session"):
     success = load_session()
@@ -2540,11 +2548,24 @@ elif st.session_state.step == 19:
             st.markdown("---")
     st.info("※ 본 결과는 예비 진단이며, 전문의 상담을 반드시 권장합니다.")
     if st.button("처음으로 돌아가기", use_container_width=True):
-        if st.confirm("정말 처음부터 다시 시작하시겠습니까? 기존 입력 내용은 모두 삭제됩니다."):
-            delete_session()   #   st.session_state.step = 0
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+        # 2) ‘확인 모드’일 때 예/아니오 버튼 그리기
+	if st.session_state.reset_confirm:
+	    st.warning("정말 처음부터 다시 시작하시겠습니까? 기존 입력 내용은 모두 삭제됩니다.")
+
+	    col1, col2 = st.columns(2)
+	    with col1:
+	        if st.button("예, 초기화", key="btn_confirm_yes"):
+	            for k in list(st.session_state.keys()):
+	                del st.session_state[k]
+	            st.experimental_rerun()
+	    with col2:
+	        if st.button("아니오, 유지", key="btn_confirm_no"):
+	            st.session_state.reset_confirm = False
+	            st.experimental_rerun()
+
+	    # 확인 모드가 활성화된 동안에는 나머지 UI를 렌더하지 않도록 early return
+	    st.stop()
+# ───────────────────────────────────────────────────────────────
 
 # ---------------------------
 # 사이드바에 세션 관리 버튼 추가
