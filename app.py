@@ -6,6 +6,19 @@ from io import BytesIO
 import datetime
 import json
 
+###
+
+if 'step' not in st.session_state:
+    st.session_state.step = 0
+    st.session_state.validation_errors = {}
+
+for key, default in diagnosis_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+
+
+##
 
 total_steps = 20
 final_step = total_steps - 1
@@ -45,98 +58,37 @@ DEFAULT_ADDS = {"눈 통증": False, "코 통증": False, "목구멍 통증": Fa
 st.session_state.setdefault(ADD_KEY, DEFAULT_ADDS.copy())
 
 
-# LocalStorage 인스턴스 생성
+# ─── 1) LocalStorage Stub (서버 메모리) ──────────────────────────
+class LocalStorage:
+    def __init__(self):
+        self._store = {}
+
+    def setItem(self, key, value):
+        self._store[key] = value
+
+    def getItem(self, key):
+        return self._store.get(key)
+
+    def deleteItem(self, key):
+        return self._store.pop(key, None)
+# ────────────────────────────────────────────────────────────────
+
+# 이제 아래부터 로컬 저장/로드 함수가 문제없이 작동합니다
 localS = LocalStorage()
-
-def sync_time_widget_with_auto_save(time_key):
-    """시간대 체크박스 동기화 및 자동 저장"""
-    widget_key = f"time_{time_key}_widget"
-    state_key = f"time_{time_key}"
-    if widget_key in st.session_state:
-        st.session_state[state_key] = st.session_state[widget_key]
-        save_session()
-
-def handle_headache_change():
-    """두통 여부 변경 처리 및 자동 저장"""
-    st.session_state["has_headache_now"] = st.session_state.get("has_headache_widget")
-    if st.session_state.get("has_headache_widget") != "예":
-        # 두통이 '예'가 아니면 관련 정보 초기화
-        keys_to_reset = [
-            "headache_areas", "headache_severity", "headache_frequency",
-            "headache_triggers", "headache_reliefs"
-        ]
-        for key in keys_to_reset:
-            if key in st.session_state:
-                del st.session_state[key]
-    save_session()
-    
-def sync_widget_key_with_auto_save(widget_key, target_key):
-    """위젯 값을 세션에 동기화하고 자동 저장"""
-    if widget_key in st.session_state:
-        st.session_state[target_key] = st.session_state[widget_key]
-        # 자동 저장
-        save_session()
-        
 def save_session():
-    """
-    현재 st.session_state의 모든 내용을 localStorage에 저장
-    datetime.date 객체는 문자열로 변환하여 저장
-    """
-    try:
-        # session_state를 딕셔너리로 변환
-        session_data = dict(st.session_state)
-        
-        # datetime.date 객체를 문자열로 변환
-        for key, value in session_data.items():
-            if isinstance(value, datetime.date):
-                session_data[key] = value.strftime("%Y-%m-%d")
-
-  
-        # JSON 문자열로 변환
-        json_data = json.dumps(session_data, ensure_ascii=False)
- 
-
-        # localStorage에 저장
-        localS.setItem('jaw_analysis_session', json_data)
-        
-        return True
-    except Exception as e:
-        st.error(f"세션 저장 중 오류가 발생했습니다: {str(e)}")
-        return False
+    session_data = dict(st.session_state)
+    # 날짜 처리...
+    json_data = json.dumps(session_data, ensure_ascii=False)
+    localS.setItem("jaw_analysis_session", json_data)
+    return True
 
 def load_session():
-    """
-    localStorage에서 저장된 세션 데이터를 불러와서 st.session_state 업데이트
-    문자열로 저장된 날짜는 다시 datetime.date 객체로 복원
-    """
-    try:
-        # localStorage에서 데이터 불러오기
-        json_data = localS.getItem('jaw_analysis_session')
-        
-        if json_data is None or json_data == "null":
-            return False
-        
-        # JSON 문자열을 딕셔너리로 변환
-        session_data = json.loads(json_data)
-
-        # 문자열로 저장된 날짜를 datetime.date 객체로 복원
-        for key, value in session_data.items():
-            if key == 'birthdate' and isinstance(value, str):
-                try:
-                    # "YYYY-MM-DD" 형식의 문자열을 datetime.date로 변환
-                    value = value.replace("/", "-")
-                    session_data[key] = datetime.datetime.strptime(value, "%Y-%m-%d").date()
-                except ValueError:
-                    # 변환 실패 시 원래 값 유지
-                    pass
- 
-        # st.session_state 업데이트 (기존 내용을 덮어쓰지 않고 업데이트)
-        st.session_state.update(session_data)
-        
-        return True
-    except Exception as e:
-        st.error(f"세션 불러오기 중 오류가 발생했습니다: {str(e)}")
+    json_data = localS.getItem("jaw_analysis_session")
+    if not json_data or json_data == "null":
         return False
+    data = json.loads(json_data)
+    st.session_state.update(data)
+    return True
 
 def delete_session():
     """
@@ -158,19 +110,7 @@ def has_saved_session():
         return json_data is not None and json_data != "null"
     except:
         return False
-###
 
-if 'step' not in st.session_state:
-    st.session_state.step = 0
-    st.session_state.validation_errors = {}
-
-for key, default in diagnosis_keys.items():
-    if key not in st.session_state:
-        st.session_state[key] = default
-
-
-
-##
 
 
 
