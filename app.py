@@ -438,24 +438,28 @@ def reset_headache_details():
                 del st.session_state[key]
 
 def restart_app():
-    # 모든 키를 지운 뒤,
+    # 세션 상태 전체 삭제
     st.session_state.clear()
-    # 다시 최소한의 키들을 세팅
+
+    # 필수 키 다시 초기화
     st.session_state.step = 0
     st.session_state.reset_confirm = False
-    # validation_errors도 필요하면 초기화
-    st.session_state.validation_errors = {}
-    # rerun 하면 위 setdefault(...)가 실행되어
-    # cervical_symptoms가 다시 기본 딕셔너리로 복원됩니다.
-    st.experimental_rerun()
+    # 필요 시 다른 기본 키들도 여기서 재설정
+    # st.session_state.setdefault("neck_shoulder_symptoms", DEFAULT_SYMPTOMS.copy())
+
+    # 앱을 맨 위에서 다시 실행
+    st.rerun()
 
 # ---------------------------------------------
 
 # 총 단계 수 (0부터 시작)
 total_steps = 20 
 # --- 사이드바 ---
-if st.sidebar.button("🔄 처음부터 다시 시작"):
-    restart_app()
+st.sidebar.button(
+    "🔄 처음부터 다시 시작",
+    key="btn_request_reset",
+    on_click=restart_app
+)
 # 사이드바: 저장·불러오기 버튼
 if st.sidebar.button("📥 저장하기", on_click=save_session):
     pass
