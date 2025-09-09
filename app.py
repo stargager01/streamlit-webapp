@@ -83,12 +83,6 @@ class LocalStorage:
 
 # 이제 아래부터 로컬 저장/로드 함수가 문제없이 작동합니다
 localS = LocalStorage()
-def save_session():
-    session_data = dict(st.session_state)
-    # 날짜 처리...
-    json_data = json.dumps(session_data, ensure_ascii=False)
-    localS.setItem("jaw_analysis_session", json_data)
-    return True
 
 def load_session():
     try:
@@ -135,6 +129,31 @@ def has_saved_session():
         json_data = localS.getItem('jaw_analysis_session')
         return json_data is not None and json_data != "null"
     except:
+        return False
+
+def save_session():
+    """
+    현재 st.session_state의 내용을 localStorage에 저장
+    """
+    try:
+        session_data = dict(st.session_state)
+
+        # 날짜 → ISO 문자열
+        for k, v in session_data.items():
+            if isinstance(v, datetime.date):
+                session_data[k] = v.strftime("%Y-%m-%d")
+
+        # json.dumps에 default=str 옵션 추가
+        json_data = json.dumps(
+            session_data,
+            ensure_ascii=False,
+            default=str
+        )
+        localS.setItem("jaw_analysis_session", json_data)
+        return True
+
+    except Exception as e:
+        st.error(f"세션 저장 중 오류가 발생했습니다: {e}")
         return False
 
 
