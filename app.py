@@ -3,7 +3,14 @@ import streamlit as st
 import json
 import datetime
 from streamlit_local_storage import LocalStorage
+# 세션에 ‘확인 모드’ 플래그 초기화
+if "reset_confirm" not in st.session_state:
+    st.session_state.reset_confirm = False
 
+# 리셋 요청 버튼
+if st.sidebar.button("처음부터 다시 시작", key="btn_request_reset"):
+    st.session_state.reset_confirm = True
+    st.experimental_rerun()
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
 
