@@ -750,8 +750,8 @@ elif st.session_state.step == 2:
                     st.session_state.step = 6
                 st.rerun()
 
+# STEP 3: 통증 양상 - 수정된 코드
 
-# STEP 3: 통증 양상
 elif st.session_state.step == 3:
     st.title("현재 증상 (통증 양상)")
     st.markdown("---")
@@ -760,16 +760,20 @@ elif st.session_state.step == 3:
     field_mapping = {
         "jaw_aggravation_widget": "jaw_aggravation",
         "pain_quality_widget": "pain_quality",
-        "pain_quality_other_widget": "pain_quality_other"
     }
 
     with st.container(border=True):
         st.markdown("**턱을 움직이거나 씹기, 말하기 등의 기능 또는 악습관(이갈이, 턱 괴기 등)으로 인해 통증이 악화되나요?**")
+        
+        # 옵션 리스트를 변수로 정의
+        aggravation_options = ["예", "아니오", "선택 안 함"]
+        
         st.radio(
             label="악화 여부",
-            options=["예", "아니오", "선택 안 함"],
+            options=aggravation_options,
             key="jaw_aggravation_widget",
-            index=2,
+            # ✅ 해결: session_state 값에 따라 index를 동적으로 계산
+            index=aggravation_options.index(st.session_state.get("jaw_aggravation", "선택 안 함")),
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("jaw_aggravation_widget", "jaw_aggravation")
@@ -777,16 +781,20 @@ elif st.session_state.step == 3:
 
         st.markdown("---")
         st.markdown("**통증을 어떻게 표현하시겠습니까? (예: 둔함, 날카로움, 욱신거림 등)**")
+        
+        # 옵션 리스트를 변수로 정의
+        quality_options = ["둔함", "날카로움", "욱신거림", "간헐적", "선택 안 함"]
+
         st.radio(
             label="통증 양상",
-            options=["둔함", "날카로움", "욱신거림", "간헐적", "선택 안 함"],
+            options=quality_options,
             key="pain_quality_widget",
-            index=4,
+            # ✅ 해결: session_state 값에 따라 index를 동적으로 계산
+            index=quality_options.index(st.session_state.get("pain_quality", "선택 안 함")),
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("pain_quality_widget", "pain_quality")
         )
-
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -794,24 +802,17 @@ elif st.session_state.step == 3:
     # 이전 단계
     with col1:
         if st.button("이전 단계"):
-            for key in ["jaw_aggravation", "pain_quality",]:
-                st.session_state.pop(key, None)
             st.session_state.step = 2
             st.rerun()
 
     # 다음 단계
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            sync_multiple_keys(field_mapping)  # 변경 없었을 경우 보완
+            sync_multiple_keys(field_mapping)
 
-            if st.session_state.get("jaw_aggravation") == "선택 안 함":
+            if st.session_state.get("jaw_aggravation", "선택 안 함") == "선택 안 함":
                 st.warning("악화 여부는 필수 항목입니다. 선택해주세요.")
-            elif st.session_state.get("pain_quality") == "선택 안 함":
-                st.warning("통증 양상 항목을 선택해주세요.")
-            else:
-                st.session_state.step = 4
-                st.rerun()
-
+            elif st.session_state.get("pain_quality", "선택 안 함")
 
 # STEP 4: 통증 부위
 elif st.session_state.step == 4:
