@@ -812,7 +812,12 @@ elif st.session_state.step == 3:
 
             if st.session_state.get("jaw_aggravation", "선택 안 함") == "선택 안 함":
                 st.warning("악화 여부는 필수 항목입니다. 선택해주세요.")
-            elif st.session_state.get("pain_quality", "선택 안 함")
+            elif st.session_state.get("pain_quality", "선택 안 함") == "선택 안 함":
+                st.warning("통증 양상 항목을 선택해주세요.")
+            else:
+                st.session_state.step = 4
+                st.rerun()
+                
 
 # STEP 4: 통증 부위
 elif st.session_state.step == 4:
