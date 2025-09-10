@@ -654,7 +654,8 @@ elif st.session_state.step == 1:
             st.rerun()
 
 
-# STEP 2: 주호소
+# STEP 2: 주호소 - 수정된 코드
+
 elif st.session_state.step == 2:
     st.title("주 호소 (Chief Complaint)")
     st.markdown("---")
@@ -668,18 +669,22 @@ elif st.session_state.step == 2:
 
     with st.container(border=True):
         st.markdown("**이번에 병원을 방문한 주된 이유는 무엇인가요?**")
+        
+        # 1. 옵션 리스트를 변수로 정의합니다.
+        complaint_options = [
+            "턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)",
+            "턱관절 소리/잠김",
+            "턱 움직임 관련 두통",
+            "기타 불편한 증상",
+            "선택 안 함"
+        ]
+        
         st.radio(
             label="",
-            options=[
-                "턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)",
-                "턱관절 소리/잠김",
-                "턱 움직임 관련 두통",
-                "기타 불편한 증상",
-                "선택 안 함"
-            ],
+            options=complaint_options,
             key="chief_complaint_widget",
-            # 올바르게 구현된 예시
-            index=onset_options.index(st.session_state.get("onset", "선택 안 함")),
+            # 2. session_state에 저장된 값을 기반으로 index를 동적으로 설정합니다.
+            index=complaint_options.index(st.session_state.get("chief_complaint", "선택 안 함")),
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("chief_complaint_widget", "chief_complaint")
@@ -693,8 +698,10 @@ elif st.session_state.step == 2:
                 on_change=sync_widget_key,
                 args=("chief_complaint_other_widget", "chief_complaint_other")
             )
-        else:
-            st.session_state["chief_complaint_other"] = ""
+        # '기타'가 아닐 때 값을 비우는 로직은 그대로 유지하는 것이 좋습니다.
+        elif "chief_complaint_other" in st.session_state:
+             st.session_state["chief_complaint_other"] = ""
+
 
         st.markdown("---")
         st.markdown("**문제가 처음 발생한 시기가 어떻게 되나요?**")
@@ -721,7 +728,6 @@ elif st.session_state.step == 2:
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            # 강제 복사 (혹시 on_change가 호출되지 않은 경우 대비)
             sync_multiple_keys(field_mapping)
 
             complaint = st.session_state.get("chief_complaint")
@@ -735,13 +741,13 @@ elif st.session_state.step == 2:
             elif onset_selected == "선택 안 함":
                 st.warning("문제 발생 시기를 선택해주세요.")
             else:
+                # 다음 단계로 넘어가는 로직은 기존과 동일합니다.
                 if complaint in ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱 움직임 관련 두통"]:
                     st.session_state.step = 3
                 elif complaint == "턱관절 소리/잠김":
                     st.session_state.step = 5
                 elif complaint == "기타 불편한 증상":
                     st.session_state.step = 6
-
                 st.rerun()
 
 
