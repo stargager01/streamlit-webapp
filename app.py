@@ -1509,10 +1509,10 @@ elif st.session_state.step == 8:
                 "passive_opening_widget": "passive_opening",
                 "passive_pain_widget": "passive_pain"
             })
-            st.session_state.step = 9
+            st.session_state.step = 8.5
             st.rerun()
 
-# STEP 8.5: AI 기반 턱 분석
+# STEP 8.5: AR 기반 턱 분석
 elif st.session_state.step == 8.5:
     st.title(" 기반 실시간 턱 분석")
     st.markdown("---")
