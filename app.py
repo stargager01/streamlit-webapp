@@ -818,8 +818,8 @@ elif st.session_state.step == 3:
                 st.session_state.step = 4
                 st.rerun()
                 
+# STEP 4: 통증 부위 - 수정된 코드
 
-# STEP 4: 통증 부위
 elif st.session_state.step == 4:
     st.title("현재 증상 (통증 분류 및 검사)")
     st.markdown("---")
@@ -827,7 +827,7 @@ elif st.session_state.step == 4:
     pain_type_options = ["선택 안 함", "넓은 부위의 통증", "근육 통증", "턱관절 통증", "두통"]
     yes_no_options = ["예", "아니오", "선택 안 함"]
 
-    # 세션 초기화
+    # 세션 초기화 (기존과 동일)
     for key in [
         "pain_types_value", "muscle_movement_pain_value", "muscle_pressure_2s_value",
         "muscle_referred_pain_value", "muscle_referred_remote_pain_value",
@@ -838,138 +838,119 @@ elif st.session_state.step == 4:
         st.session_state.setdefault(key, "선택 안 함")
 
     def get_radio_index(key, options=yes_no_options):
-        return options.index(st.session_state.get(key, "선택 안 함"))
+        # get() 메서드의 기본값으로 "선택 안 함"을 사용하여 안전하게 처리
+        val = st.session_state.get(key, "선택 안 함")
+        return options.index(val) if val in options else len(options) - 1
 
     def update_session(key, widget_key):
-        st.session_state[key] = st.session_state[widget_key]
+        st.session_state[key] = st.session_state.get(widget_key)
 
-    # UI
+    # UI (기존과 거의 동일)
     with st.container(border=True):
         st.markdown("**아래 중 해당되는 통증 유형을 선택해주세요.**")
         st.selectbox("",
             pain_type_options,
-            index=pain_type_options.index(st.session_state.pain_types_value),
+            index=pain_type_options.index(st.session_state.get("pain_types_value", "선택 안 함")),
             key="pain_types_widget_key",
-            on_change=lambda: update_session("pain_types_value", "pain_types_widget_key")
+            on_change=update_session,
+            args=("pain_types_value", "pain_types_widget_key")
         )
 
         st.markdown("---")
-        pain_type = st.session_state.pain_types_value
+        pain_type = st.session_state.get("pain_types_value")
 
+        # 이하의 모든 st.radio 및 st.selectbox 코드는 기존과 동일하게 유지합니다.
+        # ... (생략된 기존 위젯 코드) ...
         if pain_type in ["넓은 부위의 통증", "근육 통증"]:
             st.markdown("#### 💬 근육/넓은 부위 관련")
             st.markdown("**입을 벌릴 때나 턱을 움직일 때 통증이 있나요?**")
             st.radio("", yes_no_options, index=get_radio_index("muscle_movement_pain_value"),
                      key="muscle_movement_pain_widget_key",
-                     on_change=lambda: update_session("muscle_movement_pain_value", "muscle_movement_pain_widget_key"))
+                     on_change=update_session, args=("muscle_movement_pain_value", "muscle_movement_pain_widget_key"))
 
             st.markdown("**근육을 2초간 눌렀을 때 통증이 느껴지나요?**")
             st.radio("", yes_no_options, index=get_radio_index("muscle_pressure_2s_value"),
                      key="muscle_pressure_2s_widget_key",
-                     on_change=lambda: update_session("muscle_pressure_2s_value", "muscle_pressure_2s_widget_key"))
+                     on_change=update_session, args=("muscle_pressure_2s_value", "muscle_pressure_2s_widget_key"))
 
-            if st.session_state.muscle_pressure_2s_value == "예":
+            if st.session_state.get("muscle_pressure_2s_value") == "예":
                 st.markdown("**근육을 5초간 눌렀을 때, 통증이 눌린 부위 넘어서 퍼지나요?**")
                 st.radio("", yes_no_options, index=get_radio_index("muscle_referred_pain_value"),
                          key="muscle_referred_pain_widget_key",
-                         on_change=lambda: update_session("muscle_referred_pain_value", "muscle_referred_pain_widget_key"))
+                         on_change=update_session, args=("muscle_referred_pain_value", "muscle_referred_pain_widget_key"))
 
-                if st.session_state.muscle_referred_pain_value == "예":
+                if st.session_state.get("muscle_referred_pain_value") == "예":
                     st.markdown("**통증이 눌린 부위 외 다른 곳(눈, 귀 등)까지 퍼지나요?**")
                     st.radio("", yes_no_options, index=get_radio_index("muscle_referred_remote_pain_value"),
                              key="muscle_referred_remote_pain_widget_key",
-                             on_change=lambda: update_session("muscle_referred_remote_pain_value", "muscle_referred_remote_pain_widget_key"))
-                else:
-                    st.session_state.muscle_referred_remote_pain_value = "선택 안 함"
-            else:
-                st.session_state.muscle_referred_pain_value = "선택 안 함"
-                st.session_state.muscle_referred_remote_pain_value = "선택 안 함"
+                             on_change=update_session, args=("muscle_referred_remote_pain_value", "muscle_referred_remote_pain_widget_key"))
 
         elif pain_type == "턱관절 통증":
             st.markdown("#### 💬 턱관절 관련")
             st.markdown("**입을 벌릴 때나 움직일 때 통증이 있나요?**")
             st.radio("", yes_no_options, index=get_radio_index("tmj_movement_pain_value"),
                      key="tmj_movement_pain_widget_key",
-                     on_change=lambda: update_session("tmj_movement_pain_value", "tmj_movement_pain_widget_key"))
+                     on_change=update_session, args=("tmj_movement_pain_value", "tmj_movement_pain_widget_key"))
 
             st.markdown("**턱관절 부위를 눌렀을 때 기존 통증이 재현되나요?**")
             st.radio("", yes_no_options, index=get_radio_index("tmj_press_pain_value"),
                      key="tmj_press_pain_widget_key",
-                     on_change=lambda: update_session("tmj_press_pain_value", "tmj_press_pain_widget_key"))
+                     on_change=update_session, args=("tmj_press_pain_value", "tmj_press_pain_widget_key"))
 
         elif pain_type == "두통":
             st.markdown("#### 💬 두통 관련")
             st.markdown("**두통이 관자놀이 부위에서 발생하나요?**")
             st.radio("", yes_no_options, index=get_radio_index("headache_temples_value"),
                      key="headache_temples_widget_key",
-                     on_change=lambda: update_session("headache_temples_value", "headache_temples_widget_key"))
+                     on_change=update_session, args=("headache_temples_value", "headache_temples_widget_key"))
 
             st.markdown("**관자놀이 근육을 눌렀을 때 기존 두통이 재현되나요?**")
             st.radio("", yes_no_options, index=get_radio_index("headache_reproduce_by_pressure_value"),
                      key="headache_reproduce_by_pressure_widget_key",
-                     on_change=lambda: update_session("headache_reproduce_by_pressure_value", "headache_reproduce_by_pressure_widget_key"))
+                     on_change=update_session, args=("headache_reproduce_by_pressure_value", "headache_reproduce_by_pressure_widget_key"))
 
             st.markdown("**턱을 움직일 때 두통이 심해지나요?**")
             st.radio("", yes_no_options, index=get_radio_index("headache_with_jaw_value"),
                      key="headache_with_jaw_widget_key",
-                     on_change=lambda: update_session("headache_with_jaw_value", "headache_with_jaw_widget_key"))
+                     on_change=update_session, args=("headache_with_jaw_value", "headache_with_jaw_widget_key"))
 
-            if st.session_state.headache_with_jaw_value == "예":
+            if st.session_state.get("headache_with_jaw_value") == "예":
                 st.markdown("**해당 두통이 다른 의학적 진단으로 설명되지 않나요?**")
                 st.radio("", yes_no_options, index=get_radio_index("headache_not_elsewhere_value"),
                          key="headache_not_elsewhere_widget_key",
-                         on_change=lambda: update_session("headache_not_elsewhere_value", "headache_not_elsewhere_widget_key"))
-            else:
-                st.session_state.headache_not_elsewhere_value = "선택 안 함"
+                         on_change=update_session, args=("headache_not_elsewhere_value", "headache_not_elsewhere_widget_key"))
 
     st.markdown("---")
     col1, col2 = st.columns(2)
 
     with col1:
         if st.button("이전 단계"):
-            for k in [
-                "pain_types_value", "muscle_movement_pain_value", "muscle_pressure_2s_value",
-                "muscle_referred_pain_value", "muscle_referred_remote_pain_value",
-                "tmj_movement_pain_value", "tmj_press_pain_value",
-                "headache_temples_value", "headache_with_jaw_value",
-                "headache_reproduce_by_pressure_value", "headache_not_elsewhere_value"
-            ]:
-                st.session_state.pop(k, None)
+            # ✅ 해결: 데이터 삭제 로직을 완전히 제거합니다.
             st.session_state.step = 3
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
             errors = []
-            if st.session_state.pain_types_value == "선택 안 함":
+            pain_type = st.session_state.get("pain_types_value")
+            if pain_type == "선택 안 함":
                 errors.append("통증 유형을 선택해주세요.")
 
+            # ... (기존 유효성 검사 로직은 그대로 유지) ...
             if pain_type in ["넓은 부위의 통증", "근육 통증"]:
-                if st.session_state.muscle_movement_pain_value == "선택 안 함":
-                    errors.append("근육: 입 벌릴 때 통증 여부를 선택해주세요.")
-                if st.session_state.muscle_pressure_2s_value == "선택 안 함":
-                    errors.append("근육: 2초간 압통 여부를 선택해주세요.")
-                if st.session_state.muscle_pressure_2s_value == "예":
-                    if st.session_state.muscle_referred_pain_value == "선택 안 함":
-                        errors.append("근육: 5초간 통증 전이 여부를 선택해주세요.")
-                    elif st.session_state.muscle_referred_pain_value == "예" and st.session_state.muscle_referred_remote_pain_value == "선택 안 함":
-                        errors.append("근육: 통증이 다른 부위까지 퍼지는지 여부를 선택해주세요.")
-
+                if st.session_state.get("muscle_movement_pain_value") == "선택 안 함": errors.append("근육: 입 벌릴 때 통증 여부를 선택해주세요.")
+                if st.session_state.get("muscle_pressure_2s_value") == "선택 안 함": errors.append("근육: 2초간 압통 여부를 선택해주세요.")
+                if st.session_state.get("muscle_pressure_2s_value") == "예":
+                    if st.session_state.get("muscle_referred_pain_value") == "선택 안 함": errors.append("근육: 5초간 통증 전이 여부를 선택해주세요.")
+                    elif st.session_state.get("muscle_referred_pain_value") == "예" and st.session_state.get("muscle_referred_remote_pain_value") == "선택 안 함": errors.append("근육: 통증이 다른 부위까지 퍼지는지 여부를 선택해주세요.")
             if pain_type == "턱관절 통증":
-                if st.session_state.tmj_movement_pain_value == "선택 안 함":
-                    errors.append("턱관절: 움직일 때 통증 여부를 선택해주세요.")
-                if st.session_state.tmj_press_pain_value == "선택 안 함":
-                    errors.append("턱관절: 눌렀을 때 통증 여부를 선택해주세요.")
-
+                if st.session_state.get("tmj_movement_pain_value") == "선택 안 함": errors.append("턱관절: 움직일 때 통증 여부를 선택해주세요.")
+                if st.session_state.get("tmj_press_pain_value") == "선택 안 함": errors.append("턱관절: 눌렀을 때 통증 여부를 선택해주세요.")
             if pain_type == "두통":
-                if st.session_state.headache_temples_value == "선택 안 함":
-                    errors.append("두통: 관자놀이 여부를 선택해주세요.")
-                if st.session_state.headache_reproduce_by_pressure_value == "선택 안 함":
-                    errors.append("두통: 관자놀이 압통 시 두통 재현 여부를 선택해주세요.")
-                if st.session_state.headache_with_jaw_value == "선택 안 함":
-                    errors.append("두통: 턱 움직임 시 두통 악화 여부를 선택해주세요.")
-                if st.session_state.headache_with_jaw_value == "예" and st.session_state.headache_not_elsewhere_value == "선택 안 함":
-                    errors.append("두통: 다른 진단 여부를 선택해주세요.")
+                if st.session_state.get("headache_temples_value") == "선택 안 함": errors.append("두통: 관자놀이 여부를 선택해주세요.")
+                if st.session_state.get("headache_reproduce_by_pressure_value") == "선택 안 함": errors.append("두통: 관자놀이 압통 시 두통 재현 여부를 선택해주세요.")
+                if st.session_state.get("headache_with_jaw_value") == "선택 안 함": errors.append("두통: 턱 움직임 시 두통 악화 여부를 선택해주세요.")
+                if st.session_state.get("headache_with_jaw_value") == "예" and st.session_state.get("headache_not_elsewhere_value") == "선택 안 함": errors.append("두통: 다른 진단 여부를 선택해주세요.")
 
             if errors:
                 for err in errors:
@@ -977,7 +958,6 @@ elif st.session_state.step == 4:
             else:
                 st.session_state.step = 6
                 st.rerun()
-
 
 # STEP 5: 턱관절 소리 및 잠김
 elif st.session_state.step == 5:
