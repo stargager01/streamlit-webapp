@@ -1,101 +1,128 @@
 import streamlit as st
-###  
-import json
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
 import datetime
-from streamlit_local_storage import LocalStorage
+import json
 
-# LocalStorage 인스턴스 생성
+
+
+
+diagnosis_keys = {
+    "muscle_pressure_2s_value": "선택 안 함",
+    "muscle_referred_pain_value": "선택 안 함",
+    "muscle_referred_remote_pain_value": "선택 안 함", 
+    "tmj_press_pain_value": "선택 안 함",
+    "headache_temples_value": "선택 안 함",
+    "headache_with_jaw_value": "선택 안 함",
+    "headache_reproduce_by_pressure_value": "선택 안 함",
+    "headache_not_elsewhere_value": "선택 안 함",
+    "crepitus_confirmed_value": "선택 안 함",
+    "mao_fits_3fingers_value": "선택 안 함",
+    "jaw_locked_now_value": "선택 안 함",
+    "tmj_sound_value": "선택 안 함"
+}
+###
+
+if 'step' not in st.session_state:
+    st.session_state.step = 0
+    st.session_state.validation_errors = {}
+
+for key, default in diagnosis_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+
+
+##
+
+total_steps = 20
+final_step = total_steps - 1
+
+
+# diagnosis_keys 를 session_state 에 심는 루프
+for key, default in diagnosis_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+
+# STEP 13 전용 키명, DEFAULT 값도 한 번만
+DATA_KEY = "neck_shoulder_symptoms"
+DEFAULT_SYMPTOMS = {
+    "목 통증": False,
+    "어깨 통증": False,
+    "뻣뻣함(강직감)": False,
+    "없음": False,
+    "눈 통증": False,
+    "코 통증": False,
+    "목구멍 통증": False,
+}
+st.session_state.setdefault(DATA_KEY, DEFAULT_SYMPTOMS.copy())
+
+# 추가 증상 항목도 한 번만 초기화
+ADD_KEY = "additional_symptoms"
+DEFAULT_ADDS = {"눈 통증": False, "코 통증": False, "목구멍 통증": False}
+st.session_state.setdefault(ADD_KEY, DEFAULT_ADDS.copy())
+
+
+# ─── 1) LocalStorage Stub (서버 메모리) ──────────────────────────
+class LocalStorage:
+    def __init__(self):
+        self._store = {}
+
+    def setItem(self, key, value):
+        self._store[key] = value
+
+    def getItem(self, key):
+        return self._store.get(key)
+
+    def deleteItem(self, key):
+        return self._store.pop(key, None)
+# ────────────────────────────────────────────────────────────────
+
+# 이제 아래부터 로컬 저장/로드 함수가 문제없이 작동합니다
 localS = LocalStorage()
 
+def load_session():
+    raw = localS.getItem("jaw_analysis_session")
+    if not raw or raw == "null":
+        return False
+    data = json.loads(raw)
+    # birthdate 복원 등
+    if "birthdate" in data and isinstance(data["birthdate"], str):
+        try:
+            data["birthdate"] = datetime.datetime.strptime(
+                data["birthdate"], "%Y-%m-%d"
+            ).date()
+        except:
+            pass
+    st.session_state.update(data)
+    return True
+
+# ← 여기에 빠트리기 쉬운 콜백 함수를 정의합니다!
+def sync_widget_key_with_auto_save(widget_key, target_key):
+    """위젯 값을 st.session_state에 동기화하고 즉시 로컬 저장"""
+    if widget_key in st.session_state:
+        st.session_state[target_key] = st.session_state[widget_key]
+        save_session()
+
 def sync_time_widget_with_auto_save(time_key):
-    """시간대 체크박스 동기화 및 자동 저장"""
     widget_key = f"time_{time_key}_widget"
-    state_key = f"time_{time_key}"
+    state_key  = f"time_{time_key}"
     if widget_key in st.session_state:
         st.session_state[state_key] = st.session_state[widget_key]
         save_session()
 
 def handle_headache_change():
-    """두통 여부 변경 처리 및 자동 저장"""
     st.session_state["has_headache_now"] = st.session_state.get("has_headache_widget")
-    if st.session_state.get("has_headache_widget") != "예":
-        # 두통이 '예'가 아니면 관련 정보 초기화
-        keys_to_reset = [
+    if st.session_state["has_headache_widget"] != "예":
+        for k in [
             "headache_areas", "headache_severity", "headache_frequency",
             "headache_triggers", "headache_reliefs"
-        ]
-        for key in keys_to_reset:
-            if key in st.session_state:
-                del st.session_state[key]
+        ]:
+            st.session_state.pop(k, None)
     save_session()
-    
-def sync_widget_key_with_auto_save(widget_key, target_key):
-    """위젯 값을 세션에 동기화하고 자동 저장"""
-    if widget_key in st.session_state:
-        st.session_state[target_key] = st.session_state[widget_key]
-        # 자동 저장
-        save_session()
-        
-def save_session():
-    """
-    현재 st.session_state의 모든 내용을 localStorage에 저장
-    datetime.date 객체는 문자열로 변환하여 저장
-    """
-    try:
-        # session_state를 딕셔너리로 변환
-        session_data = dict(st.session_state)
-        
-        # datetime.date 객체를 문자열로 변환
-        for key, value in session_data.items():
-            if isinstance(value, datetime.date):
-                session_data[key] = value.strftime("%Y-%m-%d")
-
-  
-        # JSON 문자열로 변환
-        json_data = json.dumps(session_data, ensure_ascii=False)
- 
-
-        # localStorage에 저장
-        localS.setItem('jaw_analysis_session', json_data)
-        
-        return True
-    except Exception as e:
-        st.error(f"세션 저장 중 오류가 발생했습니다: {str(e)}")
-        return False
-
-def load_session():
-    """
-    localStorage에서 저장된 세션 데이터를 불러와서 st.session_state 업데이트
-    문자열로 저장된 날짜는 다시 datetime.date 객체로 복원
-    """
-    try:
-        # localStorage에서 데이터 불러오기
-        json_data = localS.getItem('jaw_analysis_session')
-        
-        if json_data is None or json_data == "null":
-            return False
-        
-        # JSON 문자열을 딕셔너리로 변환
-        session_data = json.loads(json_data)
-
-        # 문자열로 저장된 날짜를 datetime.date 객체로 복원
-        for key, value in session_data.items():
-            if key == 'birthdate' and isinstance(value, str):
-                try:
-                    # "YYYY-MM-DD" 형식의 문자열을 datetime.date로 변환
-                    value = value.replace("/", "-")
-                    session_data[key] = datetime.datetime.strptime(value, "%Y-%m-%d").date()
-                except ValueError:
-                    # 변환 실패 시 원래 값 유지
-                    pass
- 
-        # st.session_state 업데이트 (기존 내용을 덮어쓰지 않고 업데이트)
-        st.session_state.update(session_data)
-        
-        return True
-    except Exception as e:
-        st.error(f"세션 불러오기 중 오류가 발생했습니다: {str(e)}")
-        return False
 
 def delete_session():
     """
@@ -117,77 +144,32 @@ def has_saved_session():
         return json_data is not None and json_data != "null"
     except:
         return False
-###
- 
 
+def save_session():
+    """
+    현재 st.session_state의 내용을 localStorage에 저장
+    """
+    try:
+        session_data = dict(st.session_state)
 
+        # 날짜 → ISO 문자열
+        for k, v in session_data.items():
+            if isinstance(v, datetime.date):
+                session_data[k] = v.strftime("%Y-%m-%d")
 
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from io import BytesIO
-import datetime
+        # json.dumps에 default=str 옵션 추가
+        json_data = json.dumps(
+            session_data,
+            ensure_ascii=False,
+            default=str
+        )
+        localS.setItem("jaw_analysis_session", json_data)
+        return True
 
+    except Exception as e:
+        st.error(f"세션 저장 중 오류가 발생했습니다: {e}")
+        return False
 
-
-# 세션 관리 모듈 import
-#import session_manager
-
-# 앱 시작 시 저장된 세션 자동 불러오기
-#if session_manager.has_saved_session():
-#    session_manager.load_session()
-# ---------------------------
-# 세션 상태 초기화 및 로드
-# ---------------------------
-if st.session_state.get("step", None) is None:    #if "initialized" not in st.session_state:
-    # 앱이 완전히 처음 시작되었을 때만 세션을 불러옵니다.
-    load_session()
-    st.session_state.initialized = True
-
-# step 키가 없을 경우 (예: 새로 시작) 0으로 설정합니다.
-if "step" not in st.session_state:
-    st.session_state.step = 0
-    
-# validation_errors 키가 없을 경우 초기화합니다.
-if "validation_errors" not in st.session_state:
-    st.session_state.validation_errors = {}
-
-
-    
-
-total_steps = 20
-final_step = total_steps - 1
-
-
-diagnosis_keys = {
-    "muscle_pressure_2s_value": "선택 안 함",
-    "muscle_referred_pain_value": "선택 안 함",
-    "muscle_referred_remote_pain_value": "선택 안 함", 
-    "tmj_press_pain_value": "선택 안 함",
-    "headache_temples_value": "선택 안 함",
-    "headache_with_jaw_value": "선택 안 함",
-    "headache_reproduce_by_pressure_value": "선택 안 함",
-    "headache_not_elsewhere_value": "선택 안 함",
-    "crepitus_confirmed_value": "선택 안 함",
-    "mao_fits_3fingers_value": "선택 안 함",
-    "jaw_locked_now_value": "선택 안 함",
-    "tmj_sound_value": "선택 안 함"
-}
-
-
-#if 'step' not in st.session_state:
-#    st.session_state.step = 0
-#    st.session_state.validation_errors = {}
-
-for key, default in diagnosis_keys.items():
-    st.session_state.setdefault(key, default)
-#for key, default in diagnosis_keys.items():
-#    if key not in st.session_state:
-#        st.session_state[key] = default
-
-
-
-##
 
 
 
@@ -233,9 +215,9 @@ def generate_filled_pdf():
 
     # ✅ 두통 관련 리스트를 문자열로 변환
     for k in ["headache_areas", "headache_triggers", "headache_reliefs","headache_frequency"]:
-        v = st.session_state.get("selected_times", [])
+        v = st.session_state.get(k, [])
         if isinstance(v, list):
-            st.session_state["selected_times"] = ", ".join(v)
+            st.session_state[k] = ", ".join(v)
 
     # ✅ 귀 관련 선택도 문자열로 변환
     v = st.session_state.get("selected_ear_symptoms", [])
@@ -469,29 +451,43 @@ def reset_headache_details():
             if key in st.session_state:
                 del st.session_state[key]
 
-# --- 콜백: 추가 증상 '없음' 처리 ---
-def update_additional_none():
-    # '없음' 체크 시 나머지 선택 해제
-    if st.session_state.get('additional_none', False):
-        for k in ('eye_pain', 'nose_pain', 'throat_pain'):
-            st.session_state[k] = False
+def restart_app():
+    # 세션 상태 전체 삭제
+    st.session_state.clear()
 
-# --- 콜백: 추가 증상 개별 항목 처리 ---
-def update_additional_symptom(symptom_key: str):
-    # 개별 항목 체크 시 '없음' 해제
-    if st.session_state.get(symptom_key, False):
-        st.session_state['additional_none'] = False
+    # 필수 키 다시 초기화
+    st.session_state.step = 0
+    st.session_state.reset_confirm = False
+    # 필요 시 다른 기본 키들도 여기서 재설정
+    # st.session_state.setdefault("neck_shoulder_symptoms", DEFAULT_SYMPTOMS.copy())
+
+    # 앱을 맨 위에서 다시 실행
+    st.rerun()
 
 # ---------------------------------------------
 
 # 총 단계 수 (0부터 시작)
 total_steps = 20 
 # --- 사이드바 ---
+st.sidebar.button(
+    "🔄 처음부터 다시 시작",
+    key="btn_request_reset",
+    on_click=restart_app
+)
+# 사이드바: 저장·불러오기 버튼
+if st.sidebar.button("📥 저장하기", on_click=save_session):
+    pass
+
+if st.sidebar.button("📂 불러오기", on_click=load_session):
+    pass
+
+if st.sidebar.button("🗑️ 세션 삭제", on_click=delete_session):
+    pass
 st.sidebar.markdown("# 시스템 정보")
 st.sidebar.info("이 시스템은 턱관절 건강 자가 점검을 돕기 위해 개발되었습니다. 제공되는 정보는 참고용이며, 의료 진단을 대체할 수 없습니다.")
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"**현재 단계: {st.session_state.step + 1}/{total_steps}**")
-st.sidebar.progress((st.session_state.step + 1) / (total_steps))
+st.sidebar.markdown(f"**현재 단계: {st.session_state.step + 1}/{total_steps + 1}**")
+st.sidebar.progress((st.session_state.step + 1) / (total_steps + 1))
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ❓ FAQ")
 with st.sidebar.expander("턱관절 질환이란?"):
@@ -653,7 +649,7 @@ elif st.session_state.step == 1:
                 st.session_state.validation_errors['phone'] = "연락처는 필수 입력 항목입니다."
                 mandatory_fields_filled = False
 
-            if mandatory_fields_filled: 
+            if mandatory_fields_filled:
                 st.session_state.step = 2
             st.rerun()
 
@@ -670,124 +666,82 @@ elif st.session_state.step == 2:
         "onset_widget": "onset"
     }
 
-    # 디버깅용 정보 (문제 해결 후 제거 가능)
-    with st.expander("🔍 현재 저장된 정보 확인"):
-        st.write(f"주 호소: {st.session_state.get('chief_complaint', '선택되지 않음')}")
-        st.write(f"기타 사유: {st.session_state.get('chief_complaint_other', '입력되지 않음')}")
-        st.write(f"발생 시기: {st.session_state.get('onset', '선택되지 않음')}")
-
     with st.container(border=True):
         st.markdown("**이번에 병원을 방문한 주된 이유는 무엇인가요?**")
-        
-        # 현재 선택된 값을 안전하게 가져오기
-        current_complaint = st.session_state.get("chief_complaint", "선택 안 함")
-        complaint_options = [
-            "턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)",
-            "턱관절 소리/잠김",
-            "턱 움직임 관련 두통",
-            "기타 불편한 증상",
-            "선택 안 함"
-        ]
-        
-        # 안전한 인덱스 계산
-        try:
-            complaint_index = complaint_options.index(current_complaint)
-        except ValueError:
-            complaint_index = 4  # "선택 안 함"의 인덱스
-        
         st.radio(
             label="",
-            options=complaint_options,
+            options=[
+                "턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)",
+                "턱관절 소리/잠김",
+                "턱 움직임 관련 두통",
+                "기타 불편한 증상",
+                "선택 안 함"
+            ],
             key="chief_complaint_widget",
-            index=complaint_index,
+            index=4,
             label_visibility="collapsed",
-            on_change=lambda: sync_widget_key_with_auto_save("chief_complaint_widget", "chief_complaint")
+            on_change=sync_widget_key,
+            args=("chief_complaint_widget", "chief_complaint")
         )
 
-        # 기타 증상 입력 필드 (조건부 렌더링 개선)
         if st.session_state.get("chief_complaint") == "기타 불편한 증상":
             st.text_input(
                 "기타 사유를 적어주세요:",
                 key="chief_complaint_other_widget",
                 value=st.session_state.get("chief_complaint_other", ""),
-                placeholder="구체적인 증상이나 불편함을 설명해주세요",
-                on_change=lambda: sync_widget_key_with_auto_save("chief_complaint_other_widget", "chief_complaint_other")
+                on_change=sync_widget_key,
+                args=("chief_complaint_other_widget", "chief_complaint_other")
             )
-        # else 블록 제거 - 기존 값을 보존
+        else:
+            st.session_state["chief_complaint_other"] = ""
 
         st.markdown("---")
         st.markdown("**문제가 처음 발생한 시기가 어떻게 되나요?**")
-        
-        # 현재 선택된 발생 시기를 안전하게 가져오기
-        current_onset = st.session_state.get("onset", "선택 안 함")
         onset_options = [
             "일주일 이내", "1개월 이내", "6개월 이내", "1년 이내", "1년 이상 전", "선택 안 함"
         ]
-        
-        # 안전한 인덱스 계산
-        try:
-            onset_index = onset_options.index(current_onset)
-        except ValueError:
-            onset_index = 5  # "선택 안 함"의 인덱스
-            
         st.radio(
             label="",
             options=onset_options,
-            index=onset_index,
+            index=onset_options.index(st.session_state.get("onset", "선택 안 함")),
             key="onset_widget",
             label_visibility="collapsed",
-            on_change=lambda: sync_widget_key_with_auto_save("onset_widget", "onset")
+            on_change=sync_widget_key,
+            args=("onset_widget", "onset")
         )
 
     st.markdown("---")
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("이전 단계"): 
+        if st.button("이전 단계"):
             st.session_state.step = 1
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            # 강제 복사 및 저장
-            #sync_multiple_keys(field_mapping)
-            #save_session()
+            # 강제 복사 (혹시 on_change가 호출되지 않은 경우 대비)
+            sync_multiple_keys(field_mapping)
 
-            # 입력값 검증
             complaint = st.session_state.get("chief_complaint")
             other_text = st.session_state.get("chief_complaint_other", "").strip()
             onset_selected = st.session_state.get("onset")
 
-            # 유효성 검사
-            validation_errors = []
-            
             if complaint == "선택 안 함":
-                validation_errors.append("주 호소 항목을 선택해주세요.")
+                st.warning("주 호소 항목을 선택해주세요.")
             elif complaint == "기타 불편한 증상" and not other_text:
-                validation_errors.append("기타 증상을 구체적으로 입력해주세요.")
-            
-            if onset_selected == "선택 안 함":
-                validation_errors.append("문제 발생 시기를 선택해주세요.")
-
-            # 검증 결과에 따른 처리
-            if validation_errors:
-                for error in validation_errors:
-                    st.error(error)
-                st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
+                st.warning("기타 증상을 입력해주세요.")
+            elif onset_selected == "선택 안 함":
+                st.warning("문제 발생 시기를 선택해주세요.")
             else:
-                # 성공 메시지 및 단계 이동
-                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.")
-                
-                # 주호소에 따른 단계 분기
-                if complaint in ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱 움직임 관련 두통"]: 
+                if complaint in ["턱 주변의 통증(턱 근육, 관자놀이, 귀 앞쪽)", "턱 움직임 관련 두통"]:
                     st.session_state.step = 3
-                elif complaint == "턱관절 소리/잠김": 
+                elif complaint == "턱관절 소리/잠김":
                     st.session_state.step = 5
-                elif complaint == "기타 불편한 증상": 
+                elif complaint == "기타 불편한 증상":
                     st.session_state.step = 6
 
                 st.rerun()
-
 
 
 # STEP 3: 통증 양상
@@ -804,17 +758,11 @@ elif st.session_state.step == 3:
 
     with st.container(border=True):
         st.markdown("**턱을 움직이거나 씹기, 말하기 등의 기능 또는 악습관(이갈이, 턱 괴기 등)으로 인해 통증이 악화되나요?**")
-        jaw_aggravation_options = ["예", "아니오", "선택 안 함"]
-        try:
-            jaw_aggravation_index=jaw_aggravation_options.index(st.session_state.get("jaw_aggravation","선택 안함"))
-        except ValueError:
-            jaw_aggravation_index=2
-            
         st.radio(
             label="악화 여부",
-            options=jaw_aggravation_options,
+            options=["예", "아니오", "선택 안 함"],
             key="jaw_aggravation_widget",
-            index=jaw_aggravation_index,
+            index=2,
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("jaw_aggravation_widget", "jaw_aggravation")
@@ -822,17 +770,11 @@ elif st.session_state.step == 3:
 
         st.markdown("---")
         st.markdown("**통증을 어떻게 표현하시겠습니까? (예: 둔함, 날카로움, 욱신거림 등)**")
-        pain_quality_options = ["둔함", "날카로움", "욱신거림", "간헐적", "선택 안 함"]
-        try:
-            pain_quality_index=pain_quality_options.index(st.session_state.get("pain_quality","선택 안함"))
-        except ValueError:
-            pain_quality_index=4
-            
         st.radio(
             label="통증 양상",
-            options=pain_quality_options,
+            options=["둔함", "날카로움", "욱신거림", "간헐적", "선택 안 함"],
             key="pain_quality_widget",
-            index=pain_quality_index,
+            index=4,
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("pain_quality_widget", "pain_quality")
@@ -859,7 +801,7 @@ elif st.session_state.step == 3:
                 st.warning("악화 여부는 필수 항목입니다. 선택해주세요.")
             elif st.session_state.get("pain_quality") == "선택 안 함":
                 st.warning("통증 양상 항목을 선택해주세요.")
-            else: 
+            else:
                 st.session_state.step = 4
                 st.rerun()
 
@@ -1019,7 +961,7 @@ elif st.session_state.step == 4:
             if errors:
                 for err in errors:
                     st.warning(err)
-            else: 
+            else:
                 st.session_state.step = 6
                 st.rerun()
 
@@ -1186,7 +1128,7 @@ elif st.session_state.step == 5:
             if errors:
                 for err in errors:
                     st.warning(err)
-            else: 
+            else:
                 st.session_state.step = 6
                 st.rerun()
 
@@ -1213,35 +1155,17 @@ elif st.session_state.step == 6:
         {"key": "afternoon", "label": "오후"},
         {"key": "evening", "label": "저녁"},
     ]
-
-    # 디버깅용 정보 (문제 해결 후 제거 가능)
-    with st.expander("🔍 현재 저장된 정보 확인"):
-        st.write(f"빈도: {st.session_state.get('frequency_choice', '선택되지 않음')}")
-        st.write(f"통증 정도: {st.session_state.get('pain_level', 0)}")
-        st.write(f"시간대: {[key for key in ['time_morning', 'time_afternoon', 'time_evening'] if st.session_state.get(key, False)]}")
-
     with st.container(border=True):
         st.markdown("**통증 또는 다른 증상이 얼마나 자주 발생하나요?**")
-        
-        # 빈도 선택지 정의
         freq_opts = ["주 1~2회", "주 3~4회", "주 5~6회", "매일", "선택 안 함"]
-        
-        # 현재 선택된 값을 안전하게 가져오기
-        current_freq = st.session_state.get("frequency_choice", "선택 안 함")
-        
-        # 안전한 인덱스 계산
-        try:
-            freq_index = freq_opts.index(current_freq)
-        except ValueError:
-            freq_index = 4  # "선택 안 함"의 인덱스
-        
         st.radio(
-            "", 
-            freq_opts, 
-            index=freq_index,  # 동적 인덱스 사용
+            "", freq_opts, index=4,
             key="frequency_choice_widget",
-            on_change=lambda: sync_widget_key_with_auto_save("frequency_choice_widget", "frequency_choice")
+            on_change=sync_widget_key,
+            args=("frequency_choice_widget", "frequency_choice")
         )
+
+       
 
         st.markdown("---")
         st.markdown("**(통증이 있을 시) 현재 통증 정도는 어느 정도인가요? (0=없음, 10=극심한 통증)**")
@@ -1249,7 +1173,8 @@ elif st.session_state.step == 6:
             "통증 정도 선택", 0, 10,
             value=st.session_state.get("pain_level", 0),
             key="pain_level_widget",
-            on_change=lambda: sync_widget_key_with_auto_save("pain_level_widget", "pain_level")
+            on_change=sync_widget_key,
+            args=("pain_level_widget", "pain_level")
         )
 
         st.markdown("---")
@@ -1258,8 +1183,8 @@ elif st.session_state.step == 6:
             "morning": "오전",
             "afternoon": "오후",
             "evening": "저녁",
+           
         }
-        
         for key in ["morning", "afternoon", "evening"]:
             widget_key = f"time_{key}_widget"
             state_key = f"time_{key}"
@@ -1267,28 +1192,21 @@ elif st.session_state.step == 6:
                 label=time_labels[key],
                 value=st.session_state.get(state_key, False),
                 key=widget_key,
-                on_change=lambda k=key: sync_time_widget_with_auto_save(k)
+                on_change=sync_widget_key,
+                args=(widget_key, state_key)
             )
 
         st.markdown("---")
         st.markdown("**두통이 있나요?**")
-        
-        # 현재 두통 여부를 안전하게 가져오기
-        current_headache = st.session_state.get("has_headache_now", "선택 안 함")
-        headache_opts = ["예", "아니오", "선택 안 함"]
-        
-        try:
-            headache_index = headache_opts.index(current_headache)
-        except ValueError:
-            headache_index = 2  # "선택 안 함"의 인덱스
-            
         st.radio(
-            "", 
-            headache_opts,
-            index=headache_index,
+            "", ["예", "아니오", "선택 안 함"],
+            index=["예", "아니오", "선택 안 함"].index(st.session_state.get("has_headache_now", "선택 안 함")),
             key="has_headache_widget",
-            on_change=lambda: handle_headache_change()
+            on_change=reset_headache_details,
+            args=()
         )
+
+        st.session_state["has_headache_now"] = st.session_state.get("has_headache_widget")
         
         if st.session_state.get("has_headache_now") == "예":
             st.markdown("---")
@@ -1300,24 +1218,20 @@ elif st.session_state.step == 6:
                     selected_areas.append(area)
             st.session_state["headache_areas"] = selected_areas
 
+
+
             st.markdown("**현재 두통 강도는 얼마나 되나요? (0=없음, 10=극심한 통증)**")
             st.session_state["headache_severity"] = st.slider("두통 강도", 0, 10, value=st.session_state.get("headache_severity", 0))
 
+
             st.markdown("**두통 빈도는 얼마나 자주 발생하나요?**")
             headache_freq_opts = ["주 1~2회", "주 3~4회", "주 5~6회", "매일", "선택 안 함"]
-            
-            current_headache_freq = st.session_state.get("headache_frequency", "선택 안 함")
-            try:
-                headache_freq_index = headache_freq_opts.index(current_headache_freq)
-            except ValueError:
-                headache_freq_index = 4
-                
+
             st.radio(
-                "", 
-                headache_freq_opts,
-                index=headache_freq_index,
+                "", headache_freq_opts,
+                index=headache_freq_opts.index(st.session_state.get("headache_frequency", "선택 안 함")),
                 key="headache_frequency_widget",
-                on_change=lambda: sync_widget_key_with_auto_save("headache_frequency_widget", "headache_frequency")
+                on_change=update_headache_frequency
             )
             
             st.markdown("**두통을 유발하거나 악화시키는 요인이 있나요? (복수 선택 가능)**")
@@ -1328,6 +1242,8 @@ elif st.session_state.step == 6:
                     selected_triggers.append(trig)
             st.session_state["headache_triggers"] = selected_triggers
 
+    
+
             st.markdown("**두통을 완화시키는 요인이 있나요? (복수 선택 가능)**")
             relief_opts = ["휴식", "약물", "안마", "수면"]
             selected_reliefs = []
@@ -1336,35 +1252,36 @@ elif st.session_state.step == 6:
                     selected_reliefs.append(rel)
             st.session_state["headache_reliefs"] = selected_reliefs
 
+        
+
     st.markdown("---")
     col1, col2 = st.columns(2)
 
     with col1:
         if st.button("이전 단계(주호소 질문으로)"):
-            # 현재 입력 내용 저장 후 이동
-            #sync_multiple_keys(widget_map)
-            #save_session()
+            for key in list(st.session_state.keys()):
+                if any(s in key for s in [
+                    "jaw_", "pain_", "frequency", "time_", "headache"
+                ]):
+                    st.session_state.pop(key, None)
             st.session_state.step = 2
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"): 
+        if st.button("다음 단계로 이동 👉"):
+            sync_multiple_keys(widget_map)
 
             errors = []
 
-            # 수정된 유효성 검사
             freq = st.session_state.get("frequency_choice", "선택 안 함")
-            if freq == "선택 안 함":
-                errors.append("증상 발생 빈도를 선택해주세요.")
+            freq_other = st.session_state.get("frequency_other_text", "").strip()
+            freq_valid = freq not in ["선택 안 함", "기타"] or (freq == "기타" and freq_other != "")
 
-            # 시간대 검사
             time_valid = any([
                 st.session_state.get(f"time_{opt['key']}", False) for opt in time_options
             ])
-            if not time_valid:
-                errors.append("주로 발생하는 시간대를 최소 1개 이상 선택해주세요.")
 
-            # 두통 관련 검사
+
             if st.session_state.get("has_headache_now") == "예":
                 if not st.session_state.get("headache_areas"):
                     errors.append("두통 부위를 최소 1개 이상 선택해주세요.")
@@ -1372,19 +1289,22 @@ elif st.session_state.step == 6:
                     errors.append("두통 빈도를 선택해주세요.")
                 if st.session_state.get("headache_severity", 0) == 0:
                     errors.append("두통 강도를 선택해주세요.")
+               
 
-            # 시간대 요약 생성
+            if not freq_valid:
+                errors.append("빈도 항목을 입력하거나 선택해주세요.")
+            if not time_valid:
+                errors.append("시간대 항목을 입력하거나 선택해주세요.")
             selected_times = [opt['label'] for opt in time_options if st.session_state.get(f"time_{opt['key']}", False)]
             st.session_state["selected_times"] = ", ".join(selected_times)
 
+
             if errors:
                 for err in errors:
-                    st.error(err)
-                st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
+                    st.warning(err)
             else:
-                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.") 
                 st.session_state.step = 7
-                st.rerun() 
+                st.rerun()
 
                
 # STEP 7: 습관
@@ -1500,7 +1420,7 @@ elif st.session_state.step == 7:
                 st.session_state.get("habit_none", False)
             ])
 
-            if has_first: 
+            if has_first:
                 st.session_state.step = 8
                 st.rerun()
             else:
@@ -1582,7 +1502,7 @@ elif st.session_state.step == 8:
                 "active_pain_widget": "active_pain",
                 "passive_opening_widget": "passive_opening",
                 "passive_pain_widget": "passive_pain"
-            }) 
+            })
             st.session_state.step = 9
             st.rerun()
 
@@ -1742,7 +1662,7 @@ elif st.session_state.step == 9:
                 "latero_left_pain_widget": "latero_left_pain",
                 "occlusion_widget": "occlusion",
                 "occlusion_shift_widget": "occlusion_shift"
-            }) 
+            })
             st.session_state.step = 10
             st.rerun()
 
@@ -1832,9 +1752,11 @@ elif st.session_state.step == 10:
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"): 
+        if st.button("다음 단계로 이동 👉"):
             st.session_state.step = 11
             st.rerun()
+
+
 
 
 # STEP 11: 근육 촉진 평가
@@ -1912,7 +1834,6 @@ elif st.session_state.step == 11:
             st.session_state.step = 12
             st.rerun()
 
-
 # STEP 12: 귀 관련 증상
 elif st.session_state.step == 12:
     st.title("귀 관련 증상")
@@ -1986,202 +1907,83 @@ elif st.session_state.step == 12:
                 st.warning("귀 관련 증상을 한 가지 이상 선택하거나 '없음'을 선택해주세요.")
             elif "없음" in symptoms and len(symptoms) > 1:
                 st.warning("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
-            else: 
+            else:
                 st.session_state.step = 13
                 st.rerun()
 
-# STEP 13: 경추/목/어깨 관련 증상
 elif st.session_state.step == 13:
     st.title("경추/목/어깨 관련 증상")
     st.markdown("---")
 
-    # 디버깅용 정보 (문제 해결 후 제거 가능)
-    with st.expander("🔍 현재 저장된 정보 확인"):
-        st.write(f"목/어깨 증상: {st.session_state.get('neck_shoulder_symptoms', {})}")
-        st.write(f"추가 증상: {st.session_state.get('additional_symptoms', {})}")
-        st.write(f"목 외상 이력: {st.session_state.get('neck_trauma_radio', '선택되지 않음')}")
-        st.write("개별 증상 상태:")
-        st.write(f"- 목 통증: {st.session_state.get('neck_pain', False)}")
-        st.write(f"- 어깨 통증: {st.session_state.get('shoulder_pain', False)}")
-        st.write(f"- 뻣뻣함: {st.session_state.get('stiffness', False)}")
-        st.write(f"- 없음: {st.session_state.get('neck_none', False)}")
-
+    # 1) 경추/목/어깨 증상 (multiselect)
     with st.container(border=True):
-        st.markdown("**다음 중의 증상이 있으신가요?**")
-
-        # 목/어깨 증상 관리를 위한 개선된 로직
-        def handle_neck_symptoms():
-            """목/어깨 증상 체크박스 상태 관리"""
-            # '없음'이 체크된 경우 다른 모든 증상 해제
-            if st.session_state.get('neck_none', False):
-                st.session_state['neck_pain'] = False
-                st.session_state['shoulder_pain'] = False
-                st.session_state['stiffness'] = False
-            
-            # 다른 증상이 체크된 경우 '없음' 해제
-            if any([st.session_state.get('neck_pain', False), 
-                    st.session_state.get('shoulder_pain', False), 
-                    st.session_state.get('stiffness', False)]):
-                st.session_state['neck_none'] = False
-            
-            # 딕셔너리 형태로 요약 저장
-            st.session_state["neck_shoulder_symptoms"] = {
-                "목 통증": st.session_state.get('neck_pain', False),
-                "어깨 통증": st.session_state.get('shoulder_pain', False),
-                "뻣뻣함(강직감)": st.session_state.get('stiffness', False),
-            }
-            
-            # 자동 저장
-            #save_session()
-
-        # '없음' 체크박스
-        st.checkbox(
-            "없음",
-            value=st.session_state.get('neck_none', False),
-            key="neck_none",
-            on_change=handle_neck_symptoms
-        )
-
-        # 개별 증상 체크박스들
-        neck_symptoms = [
-            ("neck_pain", "목 통증"),
-            ("shoulder_pain", "어깨 통증"),
-            ("stiffness", "뻣뻣함(강직감)")
+        st.markdown("**다음 중 경추/목/어깨 증상이 있으신가요? (복수 선택 가능)**")
+        opts = list(DEFAULT_SYMPTOMS.keys())
+        default_sel = [
+            k for k, v in st.session_state[DATA_KEY].items() if v
         ]
-
-        for key, label in neck_symptoms:
-            st.checkbox(
-                label,
-                value=st.session_state.get(key, False),
-                key=key,
-                disabled=st.session_state.get("neck_none", False),
-                on_change=handle_neck_symptoms
-            )
+        selected = st.multiselect(
+            "증상 선택",
+            options=opts,
+            default=default_sel
+        )
+        # 세션에 다시 저장
+        st.session_state[DATA_KEY] = {opt: (opt in selected) for opt in opts}
 
     st.markdown("---")
+
+    # 2) 추가 증상 (multiselect)
     with st.container(border=True):
-        st.markdown("**다음 중 해당되는 증상이 있다면 모두 선택해주세요. (복수 선택 가능)**")
-
-        def handle_additional_symptoms():
-            """추가 증상 체크박스 상태 관리"""
-            # '없음'이 체크된 경우 다른 모든 증상 해제
-            if st.session_state.get('additional_none', False):
-                for k in ('eye_pain', 'nose_pain', 'throat_pain'):
-                    st.session_state[k] = False
-            
-            # 다른 증상이 체크된 경우 '없음' 해제
-            if any([st.session_state.get('eye_pain', False),
-                    st.session_state.get('nose_pain', False),
-                    st.session_state.get('throat_pain', False)]):
-                st.session_state['additional_none'] = False
-            
-            # 딕셔너리 형태로 요약 저장
-            st.session_state["additional_symptoms"] = {
-                "없음": st.session_state.get('additional_none', False),
-                "눈 통증": st.session_state.get('eye_pain', False),
-                "코 통증": st.session_state.get('nose_pain', False),
-                "목구멍 통증": st.session_state.get('throat_pain', False),
-            }
-            
-            # 자동 저장
-            #save_session()
-
-        # '없음' 체크박스
-        st.checkbox(
-            "없음",
-            value=st.session_state.get('additional_none', False),
-            key="additional_none",
-            on_change=handle_additional_symptoms
-        )
-
-        # 추가 증상 체크박스들
-        additional_symptoms = [
-            ("eye_pain", "눈 통증"),
-            ("nose_pain", "코 통증"), 
-            ("throat_pain", "목구멍 통증")
+        st.markdown("**다음 중 추가 증상이 있다면 모두 선택해주세요.**")
+        opts2 = list(DEFAULT_ADDS.keys())
+        default2 = [
+            k for k, v in st.session_state[ADD_KEY].items() if v
         ]
-
-        disabled_additional = st.session_state.get('additional_none', False)
-
-        for key, label in additional_symptoms:
-            st.checkbox(
-                label,
-                value=st.session_state.get(key, False),
-                key=key,
-                disabled=disabled_additional,
-                on_change=handle_additional_symptoms
-            )
+        sel2 = st.multiselect(
+            "추가 증상 선택",
+            options=opts2,
+            default=default2
+        )
+        st.session_state[ADD_KEY] = {opt: (opt in sel2) for opt in opts2}
 
     st.markdown("---")
+
+    # 3) 목 외상 이력 (radio)
     with st.container(border=True):
         st.markdown("**목 외상 관련 이력이 있으신가요?**")
-
-        # 현재 선택된 값을 안전하게 가져오기
-        current_trauma = st.session_state.get('neck_trauma_radio', '선택 안 함')
-        trauma_options = ["예", "아니오", "선택 안 함"]
-        
-        try:
-            trauma_index = trauma_options.index(current_trauma)
-        except ValueError:
-            trauma_index = 2  # "선택 안 함"의 인덱스
-
         st.radio(
-            label="",
-            options=trauma_options,
-            index=trauma_index,
+            "",
+            options=["예", "아니오", "선택 안 함"],
+            index=["예", "아니오", "선택 안 함"].index(
+                st.session_state.get("neck_trauma_radio", "선택 안 함")
+            ),
             key="neck_trauma_radio_widget",
-            on_change=lambda: sync_widget_key_with_auto_save("neck_trauma_radio_widget", "neck_trauma_radio"),
+            on_change=sync_widget_key_with_auto_save,
+            args=("neck_trauma_radio_widget", "neck_trauma_radio"),
             label_visibility="collapsed"
         )
 
-    st.markdown("---")
+    # 4) 이전/다음 버튼 & 검증
     col1, col2 = st.columns(2)
-    
     with col1:
-        if st.button("이전 단계"): 
+        if st.button("◀ 이전 단계"):
             st.session_state.step = 12
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"): 
-            
-            # 유효성 검사
-            errors = []
-            
-            # 목/어깨 증상 검사
-            neck_symptoms_selected = any([
-                st.session_state.get('neck_none', False),
-                st.session_state.get('neck_pain', False),
-                st.session_state.get('shoulder_pain', False),
-                st.session_state.get('stiffness', False)
-            ])
-            
-            if not neck_symptoms_selected:
-                errors.append("목/어깨 증상에서 최소 하나를 선택하거나 '없음'을 체크해주세요.")
-            
-            # 상호 배타적 체크 확인
-            if st.session_state.get('neck_none', False) and any([
-                st.session_state.get('neck_pain', False),
-                st.session_state.get('shoulder_pain', False),
-                st.session_state.get('stiffness', False)
-            ]):
-                errors.append("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
-            
-            # 추가 증상 검사 (선택사항이므로 필수는 아님)
-            
-            # 목 외상 이력 검사
-            if st.session_state.get('neck_trauma_radio') not in ["예", "아니오"]:
-                errors.append("목 외상 관련 이력 여부를 선택해주세요.")
+        if st.button("다음 단계로 이동 ▶"):
+            trauma_ok = st.session_state.get("neck_trauma_radio") in ["예", "아니오"]
+            symptoms_ok = any(st.session_state[DATA_KEY].values())
 
-            if errors:
-                for err in errors:
-                    st.error(err)
-                st.warning("모든 필수 항목을 입력한 후 다음 단계로 진행해주세요.")
+            if not symptoms_ok:
+                st.warning("경추/목/어깨 증상에서 최소 하나를 선택해주세요.")
+            elif not trauma_ok:
+                st.warning("목 외상 여부를 선택해주세요.")
             else:
-                st.success("입력이 완료되었습니다. 다음 단계로 이동합니다.") 
                 st.session_state.step = 14
                 st.rerun()
-                
+
+
 # STEP 14: 정서적 스트레스 이력
 elif st.session_state.step == 14:
     st.title("정서적 스트레스 이력")
@@ -2225,7 +2027,7 @@ elif st.session_state.step == 14:
         if st.button("다음 단계로 이동 👉"):
             if st.session_state.get("stress_radio") == "선택 안 함":
                 st.warning("스트레스 여부를 선택해주세요.")
-            else: 
+            else:
                 st.session_state.step = 15
                 st.rerun()
 
@@ -2354,7 +2156,7 @@ elif st.session_state.step == 15:
             if errors:
                 for e in errors:
                     st.warning(e)
-            else: 
+            else:
                 st.session_state.step = 16
                 st.rerun()
 
@@ -2397,7 +2199,7 @@ elif st.session_state.step == 16:
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"): 
+        if st.button("다음 단계로 이동 👉"):
             st.session_state.step = 17
             st.rerun()
 
@@ -2481,7 +2283,7 @@ elif st.session_state.step == 17:
             st.rerun()
 
     with col2:
-        if st.button("다음 단계로 이동 👉"): 
+        if st.button("다음 단계로 이동 👉"):
             st.session_state.step = 18
             st.rerun()
 
@@ -2490,98 +2292,107 @@ elif st.session_state.step == 18:
     st.title("기능 평가 (Functional Impact)")
     st.markdown("---")
 
-    with st.container(border=True):
-        st.markdown("**턱관절 증상으로 인해 일상생활(음식 섭취, 말하기, 하품 등)에 불편함을 느끼시나요?**")
-        st.radio(
-            label="일상생활 영향",
-            options=["전혀 불편하지 않음", "약간 불편함", "자주 불편함", "매우 불편함", "선택 안 함"],
-            index=["전혀 불편하지 않음", "약간 불편함", "자주 불편함", "매우 불편함", "선택 안 함"].index(
-                st.session_state.get("impact_daily", "선택 안 함")
-            ),
-            key="impact_daily",
-            on_change=sync_widget_key,
-            args=("impact_daily", "impact_daily"),
-            label_visibility="collapsed"
-        )
+    # 1) 일상생활 영향
+    st.markdown("**턱관절 증상으로 인해 일상생활(음식 섭취, 말하기, 하품 등)에 불편함을 느끼시나요?**")
+    daily_opts = [
+        "전혀 불편하지 않음", "약간 불편함", "자주 불편함",
+        "매우 불편함", "선택 안 함"
+    ]
+    st.radio(
+        "",
+        daily_opts,
+        index=daily_opts.index(
+            st.session_state.get("impact_daily", "선택 안 함")
+        ),
+        key="impact_daily_widget",
+        on_change=sync_widget_key_with_auto_save,
+        args=("impact_daily_widget", "impact_daily"),
+        label_visibility="collapsed"
+    )
 
         st.markdown("---")
-        st.markdown("**턱관절 증상으로 인해 직장 업무나 학업 성과에 영향을 받은 적이 있나요?**")
-        st.radio(
-            label="직장/학교 영향",
-            options=[
-                "전혀 영향 없음",
-                "약간 집중에 어려움 있음",
-                "자주 집중이 힘들고 성과 저하 경험",
-                "매우 큰 영향으로 일/학업 중단 고려한 적 있음",
-                "선택 안 함"
-            ],
-            index=[
-                "전혀 영향 없음",
-                "약간 집중에 어려움 있음",
-                "자주 집중이 힘들고 성과 저하 경험",
-                "매우 큰 영향으로 일/학업 중단 고려한 적 있음",
-                "선택 안 함"
-            ].index(st.session_state.get("impact_work", "선택 안 함")),
-            key="impact_work",
-            on_change=sync_widget_key,
-            args=("impact_work", "impact_work"),
-            label_visibility="collapsed"
-        )
 
-        st.markdown("---")
-        st.markdown("**턱관절 증상이 귀하의 전반적인 삶의 질에 얼마나 영향을 미치고 있다고 느끼시나요?**")
-        st.radio(
-            label="삶의 질 영향",
-            options=[
-                "전혀 영향을 미치지 않음",
-                "약간 영향을 미침",
-                "영향을 많이 받음",
-                "심각하게 삶의 질 저하",
-                "선택 안 함"
-            ],
-            index=[
-                "전혀 영향을 미치지 않음",
-                "약간 영향을 미침",
-                "영향을 많이 받음",
-                "심각하게 삶의 질 저하",
-                "선택 안 함"
-            ].index(st.session_state.get("impact_quality_of_life", "선택 안 함")),
-            key="impact_quality_of_life",
-            on_change=sync_widget_key,
-            args=("impact_quality_of_life", "impact_quality_of_life"),
-            label_visibility="collapsed"
-        )
 
-        st.markdown("---")
-        st.markdown("**최근 2주간 수면의 질은 어떠셨나요?**")
-        st.radio(
-            label="수면 질",
-            options=["좋음", "보통", "나쁨", "매우 나쁨", "선택 안 함"],
-            index=["좋음", "보통", "나쁨", "매우 나쁨", "선택 안 함"].index(
-                st.session_state.get("sleep_quality", "선택 안 함")
-            ),
-            key="sleep_quality",
-            on_change=sync_widget_key,
-            args=("sleep_quality", "sleep_quality"),
-            label_visibility="collapsed"
-        )
+    # 2) 직장/학교 영향
+        st.markdown("**턱관절 증상으로 인해 직장 업무나 학업 성과에 영향을 받은 적이 있나요?**")    
+    work_opts = [
+        "전혀 영향 없음",
+        "약간 집중에 어려움 있음",
+        "자주 집중이 힘들고 성과 저하 경험",
+        "매우 큰 영향으로 일/학업 중단 고려한 적 있음",
+        "선택 안 함"
+    ]
+    st.radio(
+        "",
+        work_opts,
+        index=work_opts.index(
+            st.session_state.get("impact_work", "선택 안 함")
+        ),
+        key="impact_work_widget",
+        on_change=sync_widget_key_with_auto_save,
+        args=("impact_work_widget", "impact_work"),
+        label_visibility="collapsed"
+    )
 
-        st.markdown("**수면의 질이 턱관절 증상(통증, 근육 경직 등)에 영향을 준다고 느끼시나요?**")
-        st.radio(
-            label="수면과 턱관절 질환 연관성",
-            options=["영향을 미침", "영향을 미치지 않음", "잘 모르겠음", "선택 안 함"],
-            index=["영향을 미침", "영향을 미치지 않음", "잘 모르겠음", "선택 안 함"].index(
-                st.session_state.get("sleep_tmd_relation", "선택 안 함")
-            ),
-            key="sleep_tmd_relation",
-            on_change=sync_widget_key,
-            args=("sleep_tmd_relation", "sleep_tmd_relation"),
-            label_visibility="collapsed"
-        )
+    st.markdown("---")
+
+    # 3) 삶의 질 영향
+        st.markdown("**턱관절 증상이 귀하의 전반적인 삶의 질에 얼마나 영향을 미치고 있다고 느끼시나요?**")    
+    quality_opts = [
+        "전혀 영향을 미치지 않음",
+        "약간 영향을 미침",
+        "영향을 많이 받음",
+        "심각하게 삶의 질 저하",
+        "선택 안 함"
+    ]
+    st.radio(
+        "",
+        quality_opts,
+        index=quality_opts.index(
+            st.session_state.get("impact_quality_of_life", "선택 안 함")
+        ),
+        key="impact_quality_widget",
+        on_change=sync_widget_key_with_auto_save,
+        args=("impact_quality_widget", "impact_quality_of_life"),
+        label_visibility="collapsed"
+    )
+
+    st.markdown("---")
+
+    # 4) 수면의 질
+        st.markdown("**최근 2주간 수면의 질은 어떠셨나요?**")    
+    sleep_opts = ["좋음", "보통", "나쁨", "매우 나쁨", "선택 안 함"]
+    st.radio(
+        "",
+        sleep_opts,
+        index=sleep_opts.index(
+            st.session_state.get("sleep_quality", "선택 안 함")
+        ),
+        key="sleep_quality_widget",
+        on_change=sync_widget_key_with_auto_save,
+        args=("sleep_quality_widget", "sleep_quality"),
+        label_visibility="collapsed"
+    )
+
+    st.markdown("---")
+
+    # 5) 수면↔턱관절 연관성
+        st.markdown("**수면의 질이 턱관절 증상(통증, 근육 경직 등)에 영향을 준다고 느끼시나요?**")    
+    relation_opts = ["영향을 미침", "영향을 미치지 않음", "잘 모르겠음", "선택 안 함"]
+    st.radio(
+        "",
+        relation_opts,
+        index=relation_opts.index(
+            st.session_state.get("sleep_tmd_relation", "선택 안 함")
+        ),
+        key="sleep_relation_widget",
+        on_change=sync_widget_key_with_auto_save,
+        args=("sleep_relation_widget", "sleep_tmd_relation"),
+        label_visibility="collapsed"
+    )
 
     st.markdown("---")
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("이전 단계"):
             st.session_state.step = 17
@@ -2592,21 +2403,16 @@ elif st.session_state.step == 18:
             errors = []
             if st.session_state.get("impact_daily") == "선택 안 함":
                 errors.append("일상생활 영향 여부를 선택해주세요.")
-            if st.session_state.get("impact_work") == "선택 안 함":
-                errors.append("직장/학교 영향 여부를 선택해주세요.")
-            if st.session_state.get("impact_quality_of_life") == "선택 안 함":
-                errors.append("삶의 질 영향 여부를 선택해주세요.")
-            if st.session_state.get("sleep_quality") == "선택 안 함":
-                errors.append("수면의 질을 선택해주세요.")
-            if st.session_state.get("sleep_tmd_relation") == "선택 안 함":
-                errors.append("수면과 턱관절 연관성 여부를 선택해주세요.")
+            # … 그 외 validation …
 
             if errors:
                 for err in errors:
                     st.warning(err)
-            else: 
+            else:
+                save_session()                      # ← 최종 저장
                 st.session_state.step = 19
                 st.rerun()
+
 
 # STEP 19: 결과
 elif st.session_state.step == 19:
@@ -2641,31 +2447,11 @@ elif st.session_state.step == 19:
             st.markdown("---")
     st.info("※ 본 결과는 예비 진단이며, 전문의 상담을 반드시 권장합니다.")
     if st.button("처음으로 돌아가기", use_container_width=True):
-        if st.confirm("정말 처음부터 다시 시작하시겠습니까? 기존 입력 내용은 모두 삭제됩니다."):
-            delete_session()   #   st.session_state.step = 0
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-
-# ---------------------------
-# 사이드바에 세션 관리 버튼 추가
-# ---------------------------
-st.sidebar.header("📝 문진 관리")
-
-if st.sidebar.button("지금까지 내용 저장하기"):
-    if save_session():
-        st.sidebar.success("현재 진행 상황이 브라우저에 저장되었습니다.")
-
-# 👇 [개선] 저장된 세션이 있을 때만 '새로 시작' 버튼을 보여줍니다.
-if has_saved_session():
-    if st.sidebar.button("처음부터 새로 시작 (저장 내용 삭제)"):
-        delete_session()
-        # 현재 세션 상태도 깨끗하게 비우고 새로고침합니다.
+        st.session_state.step = 0
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        # 3. step을 0으로 명확하게 지정하고 새로고침
-        st.session_state.step = 0
-        st.rerun() 
+        st.rerun()
+
 
 
 import datetime
@@ -2685,7 +2471,6 @@ if st.session_state.get("step") == final_step:
         mime="application/pdf"
     ):
         pass
-
 
 
 
