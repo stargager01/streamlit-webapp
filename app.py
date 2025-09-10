@@ -2310,11 +2310,11 @@ elif st.session_state.step == 18:
         label_visibility="collapsed"
     )
 
-        st.markdown("---")
+    st.markdown("---")
 
 
     # 2) 직장/학교 영향
-        st.markdown("**턱관절 증상으로 인해 직장 업무나 학업 성과에 영향을 받은 적이 있나요?**")    
+    st.markdown("**턱관절 증상으로 인해 직장 업무나 학업 성과에 영향을 받은 적이 있나요?**")    
     work_opts = [
         "전혀 영향 없음",
         "약간 집중에 어려움 있음",
@@ -2337,7 +2337,7 @@ elif st.session_state.step == 18:
     st.markdown("---")
 
     # 3) 삶의 질 영향
-        st.markdown("**턱관절 증상이 귀하의 전반적인 삶의 질에 얼마나 영향을 미치고 있다고 느끼시나요?**")    
+    st.markdown("**턱관절 증상이 귀하의 전반적인 삶의 질에 얼마나 영향을 미치고 있다고 느끼시나요?**")    
     quality_opts = [
         "전혀 영향을 미치지 않음",
         "약간 영향을 미침",
@@ -2360,7 +2360,7 @@ elif st.session_state.step == 18:
     st.markdown("---")
 
     # 4) 수면의 질
-        st.markdown("**최근 2주간 수면의 질은 어떠셨나요?**")    
+    st.markdown("**최근 2주간 수면의 질은 어떠셨나요?**")    
     sleep_opts = ["좋음", "보통", "나쁨", "매우 나쁨", "선택 안 함"]
     st.radio(
         "",
@@ -2377,7 +2377,7 @@ elif st.session_state.step == 18:
     st.markdown("---")
 
     # 5) 수면↔턱관절 연관성
-        st.markdown("**수면의 질이 턱관절 증상(통증, 근육 경직 등)에 영향을 준다고 느끼시나요?**")    
+    st.markdown("**수면의 질이 턱관절 증상(통증, 근육 경직 등)에 영향을 준다고 느끼시나요?**")    
     relation_opts = ["영향을 미침", "영향을 미치지 않음", "잘 모르겠음", "선택 안 함"]
     st.radio(
         "",
