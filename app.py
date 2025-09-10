@@ -5,7 +5,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 import datetime
 import json
-
+ 
 
 diagnosis_keys = {
     "muscle_pressure_2s_value": "선택 안 함",
@@ -1511,485 +1511,22 @@ elif st.session_state.step == 8:
             })
             st.session_state.step = 9
             st.rerun()
- 
-# STEP 9: AR 기반 턱 분석
-elif st.session_state.step == 9:
+
+# STEP 8.5: AI 기반 턱 분석
+elif st.session_state.step == 8.5:
     st.title(" 기반 실시간 턱 분석")
     st.markdown("---")
 
     # 1. HTML 파일을 읽어옵니다 (또는 긴 문자열로 유지).
     # 실수를 줄이기 위해 파일을 분리하는 것을 추천합니다.
-    #with open("jaw_analyzer.html", "r", encoding="utf-8") as f:
-    #   html_code = f.read()
-        #html_code,
+    with open("jaw_analyzer.html", "r", encoding="utf-8") as f:
+        html_code = f.read()
+
     # 2. 컴포넌트를 호출하고 반환 값을 받습니다.
     # key를 지정해야 Streamlit이 상태를 유지하고 값을 제대로 반환합니다.
-    measurement_result = st.components.v1.html("""
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>턱관절 실시간 분석</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.2.0/tf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/face-landmarks-detection/0.0.3/face-landmarks-detection.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/gh/streamlit/streamlit/frontend/src/lib/streamlit-component-lib.js"></script>
-
-    <style> 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .camera-section {
-            display: flex;
-            gap: 20px;
-            padding: 30px;
-        }
-        
-        .video-container {
-            flex: 1;
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        #video {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .controls {
-            flex: 1;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .measurement-display {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        
-        .metric {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .metric:last-child {
-            border-bottom: none;
-        }
-        
-        .metric-label {
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        .metric-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-left: 10px;
-        }
-        
-        .status-normal { background: #28a745; }
-        .status-warning { background: #ffc107; }
-        .status-error { background: #dc3545; }
-        
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: transform 0.2s;
-            width: 100%;
-            margin: 10px 0;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .calibration-info {
-            background: #e8f4f8;
-            border-left: 4px solid #17a2b8;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 15px 0;
-            font-size: 14px;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #6c757d;
-        }
-        
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 15px 0;
-        }
-        
-        @media (max-width: 768px) {
-            .camera-section {
-                flex-direction: column;
-            }
-        }
-    </style> 
-</head>
-<body>
-    <script>
-        class JawAnalyzer {
-            constructor() {
-                this.video = document.getElementById('video');
-                this.canvas = document.getElementById('canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.model = null;
-                this.isRunning = false;
-                this.calibrationData = null;
-                this.measurements = {
-                    maxOpening: 0,
-                    currentOpening: 0,
-                    deviation: 'normal',
-                    deflection: 'normal'
-                };
-                this.pixelsPerMM = 1; // 보정을 통해 설정됨
-                
-                this.init();
-            }
-            
-            async init() {
-                try {
-                    await this.setupCamera();
-                    await this.loadModel();
-                    this.setupEventListeners();
-                    this.startDetection();
-                } catch (error) {
-                    this.showError('초기화 실패: ' + error.message);
-                }
-            }
-            
-            async setupCamera() {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { 
-                            width: 640, 
-                            height: 480,
-                            facingMode: 'user'
-                        }
-                    });
-                    
-                    this.video.srcObject = stream;
-                    
-                    return new Promise(resolve => {
-                        this.video.onloadedmetadata = () => {
-                            this.canvas.width = this.video.videoWidth;
-                            this.canvas.height = this.video.videoHeight;
-                            document.getElementById('loading').style.display = 'none';
-                            resolve();
-                        };
-                    });
-                } catch (error) {
-                    throw new Error('카메라 접근 실패: ' + error.message);
-                }
-            }
-            
-            async loadModel() {
-                try {
-                    // MediaPipe FaceMesh 모델 로드
-                    this.model = await faceLandmarksDetection.createDetector(
-                        faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
-                        {
-                            runtime: 'tfjs',
-                            refineLandmarks: true,
-                            maxFaces: 1
-                        }
-                    );
-                } catch (error) {
-                    throw new Error('AI 모델 로드 실패: ' + error.message);
-                }
-            }
-            
-            setupEventListeners() {
-                document.getElementById('calibrateBtn').addEventListener('click', () => this.calibrate());
-                document.getElementById('recordBtn').addEventListener('click', () => this.recordMeasurement());
-                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
-            }
-            
-            async startDetection() {
-                this.isRunning = true;
-                document.getElementById('calibrateBtn').disabled = false;
-                await this.detectLoop();
-            }
-            
-            async detectLoop() {
-                if (!this.isRunning) return;
-                
-                try {
-                    const faces = await this.model.estimateFaces(this.video);
-                    
-                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                    
-                    if (faces.length > 0) {
-                        const face = faces[0];
-                        this.analyzeFace(face);
-                        this.drawLandmarks(face);
-                    }
-                } catch (error) {
-                    console.error('Detection error:', error);
-                }
-                
-                requestAnimationFrame(() => this.detectLoop());
-            }
-            
-            analyzeFace(face) {
-                const keypoints = face.keypoints;
-                
-                // 입술 상단과 하단 랜드마크 (MediaPipe 기준)
-                const upperLip = keypoints[13]; // 상순 중앙
-                const lowerLip = keypoints[14]; // 하순 중앙
-                
-                // 턱 중앙과 코 중앙 (편위/편향 측정용)
-                const noseTip = keypoints[1];
-                const chinCenter = keypoints[18];
-                
-                // 얼굴 양쪽 끝점 (스케일 보정용)
-                const leftCheek = keypoints[234];
-                const rightCheek = keypoints[454];
-                
-                if (upperLip && lowerLip && noseTip && chinCenter) {
-                    // 현재 입벌림 계산 (픽셀)
-                    const openingPixels = Math.abs(upperLip.y - lowerLip.y);
-                    const currentOpeningMM = openingPixels / this.pixelsPerMM;
-                    
-                    this.measurements.currentOpening = Math.round(currentOpeningMM * 10) / 10;
-                    
-                    // 최대 입벌림 업데이트
-                    if (this.measurements.currentOpening > this.measurements.maxOpening) {
-                        this.measurements.maxOpening = this.measurements.currentOpening;
-                    }
-                    
-                    // 편위/편향 분석
-                    this.analyzeJawMovement(noseTip, chinCenter, upperLip, lowerLip);
-                    
-                    this.updateDisplay();
-                }
-            }
-            
-            analyzeJawMovement(noseTip, chinCenter, upperLip, lowerLip) {
-                // 얼굴 중심선 (코-턱 라인)
-                const faceCenter = (noseTip.x + chinCenter.x) / 2;
-                
-                // 입 중심
-                const mouthCenter = (upperLip.x + lowerLip.x) / 2;
-                
-                // 편위 계산 (중심선에서의 거리)
-                const deviationPixels = Math.abs(mouthCenter - faceCenter);
-                const deviationMM = deviationPixels / this.pixelsPerMM;
-                
-                // 편위 판정 (일반적으로 2mm 이상이면 의미있는 편위)
-                if (deviationMM > 2) {
-                    this.measurements.deviation = mouthCenter > faceCenter ? '우측 편위' : '좌측 편위';
-                } else {
-                    this.measurements.deviation = '정상';
-                }
-                
-                // 편향 판정 (입벌림 시 턱 끝의 이동 패턴 분석)
-                // 실제로는 시간에 따른 변화를 추적해야 하지만, 
-                // 여기서는 간단히 현재 상태만 체크
-                const chinDeviation = Math.abs(chinCenter.x - faceCenter);
-                const chinDeviationMM = chinDeviation / this.pixelsPerMM;
-                
-                if (chinDeviationMM > 3) {
-                    this.measurements.deflection = chinCenter.x > faceCenter ? '우측 편향' : '좌측 편향';
-                } else {
-                    this.measurements.deflection = '정상';
-                }
-            }
-            
-            drawLandmarks(face) {
-                const keypoints = face.keypoints;
-                
-                this.ctx.fillStyle = '#ff0000';
-                this.ctx.strokeStyle = '#00ff00';
-                this.ctx.lineWidth = 2;
-                
-                // 입술 포인트 강조
-                const upperLip = keypoints[13];
-                const lowerLip = keypoints[14];
-                
-                if (upperLip && lowerLip) {
-                    // 입벌림 라인 그리기
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(upperLip.x, upperLip.y);
-                    this.ctx.lineTo(lowerLip.x, lowerLip.y);
-                    this.ctx.stroke();
-                    
-                    // 포인트 표시
-                    this.ctx.beginPath();
-                    this.ctx.arc(upperLip.x, upperLip.y, 3, 0, 2 * Math.PI);
-                    this.ctx.fill();
-                    
-                    this.ctx.beginPath();
-                    this.ctx.arc(lowerLip.x, lowerLip.y, 3, 0, 2 * Math.PI);
-                    this.ctx.fill();
-                }
-                
-                // 중심선 그리기
-                const noseTip = keypoints[1];
-                const chinCenter = keypoints[18];
-                
-                if (noseTip && chinCenter) {
-                    this.ctx.strokeStyle = '#0000ff';
-                    this.ctx.setLineDash([5, 5]);
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(noseTip.x, noseTip.y);
-                    this.ctx.lineTo(chinCenter.x, chinCenter.y);
-                    this.ctx.stroke();
-                    this.ctx.setLineDash([]);
-                }
-            }
-            
-            calibrate() {
-                // 보정: 표준 얼굴 크기를 기준으로 픽셀-mm 비율 계산
-                // 성인 평균 얼굴 너비: 약 140-160mm
-                // 여기서는 간단히 150mm로 가정
-                
-                alert('입을 자연스럽게 다문 상태에서 확인을 눌러주세요.');
-                
-                // 실제로는 사용자가 알려진 크기의 객체(예: 동전)를 잡고 있게 하거나,
-                // 얼굴의 특정 부위 크기를 기준으로 보정해야 함
-                this.pixelsPerMM = 3.5; // 임시값 - 실제로는 동적 계산 필요
-                
-                document.getElementById('recordBtn').disabled = false;
-                alert('보정이 완료되었습니다. 이제 측정을 시작할 수 있습니다.');
-            }
-
-            recordMeasurement() {
-                const data = {
-                    timestamp: new Date().toISOString(),
-                    maxOpening: this.measurements.maxOpening,
-                    currentOpening: this.measurements.currentOpening,
-                    deviation: this.measurements.deviation,
-                    deflection: this.measurements.deflection
-                };
-
-                // ✅ [수정 2] postMessage 대신 Streamlit.setComponentValue 사용
-                Streamlit.setComponentValue(data);
-
-                alert('측정값이 Streamlit 앱으로 전송되었습니다:\n' +
-                      `최대 입벌림: ${data.maxOpening}mm\n` +
-                      `편위: ${data.deviation}\n` +
-                      `편향: ${data.deflection}`);
-            }
-
-            reset() {
-                this.measurements = {
-                    maxOpening: 0,
-                    currentOpening: 0,
-                    deviation: '정상',
-                    deflection: '정상'
-                };
-                this.updateDisplay();
-            }
-            
-            updateDisplay() {
-                document.getElementById('maxOpening').textContent = 
-                    this.measurements.maxOpening.toFixed(1) + ' mm';
-                    
-                document.getElementById('currentOpening').textContent = 
-                    this.measurements.currentOpening.toFixed(1) + ' mm';
-                    
-                // 편위 상태 업데이트
-                const deviationElement = document.getElementById('deviation');
-                deviationElement.innerHTML = this.measurements.deviation + 
-                    this.getStatusIndicator(this.measurements.deviation);
-                    
-                // 편향 상태 업데이트
-                const deflectionElement = document.getElementById('deflection');
-                deflectionElement.innerHTML = this.measurements.deflection + 
-                    this.getStatusIndicator(this.measurements.deflection);
-            }
-            
-            getStatusIndicator(status) {
-                if (status === '정상') {
-                    return '<span class="status-indicator status-normal"></span>';
-                } else if (status.includes('편위') || status.includes('편향')) {
-                    return '<span class="status-indicator status-warning"></span>';
-                }
-                return '<span class="status-indicator status-error"></span>';
-            }
-            
-            showError(message) {
-                const errorDiv = document.getElementById('errorMessage');
-                errorDiv.textContent = message;
-                errorDiv.style.display = 'block';
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
-
-        window.addEventListener('load', () => {
-            new JawAnalyzer();
-        });
-    </script>
-</body>
-</html>
-""",height=700,
+    measurement_result = st.components.v1.html(
+        html_code,
+        height=700,
         scrolling=True,
         key="jaw_analyzer_component"
     )
@@ -2011,11 +1548,11 @@ elif st.session_state.step == 9:
             st.rerun()
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.step = 10
+            st.session_state.step = 9
             st.rerun()
 	
-# STEP 10: 턱 운동 범위 및 관찰2 (Range of Motion & Observations)
-elif st.session_state.step == 10:
+# STEP 9: 턱 운동 범위 및 관찰2 (Range of Motion & Observations)
+elif st.session_state.step == 9:
     st.title("턱 운동 범위 및 관찰 (Range of Motion & Observations)")
     st.markdown("---")
     st.markdown(
@@ -2152,7 +1689,7 @@ elif st.session_state.step == 10:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 9
+            st.session_state.step = 8
             st.rerun()
 
     with col2:
@@ -2170,12 +1707,12 @@ elif st.session_state.step == 10:
                 "occlusion_widget": "occlusion",
                 "occlusion_shift_widget": "occlusion_shift"
             })
-            st.session_state.step = 11
+            st.session_state.step = 10
             st.rerun()
 
 
-# STEP 11: 턱 운동 범위 및 관찰3 (Range of Motion & Observations)
-elif st.session_state.step == 11:
+# STEP 10: 턱 운동 범위 및 관찰3 (Range of Motion & Observations)
+elif st.session_state.step == 10:
     st.title("턱 운동 범위 및 관찰 (Range of Motion & Observations)")
     st.markdown("---")
     st.markdown(
@@ -2255,19 +1792,19 @@ elif st.session_state.step == 11:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 10
+            st.session_state.step = 9
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.step = 12
+            st.session_state.step = 11
             st.rerun()
 
 
 
 
-# STEP 12: 근육 촉진 평가
-elif st.session_state.step == 12:
+# STEP 11: 근육 촉진 평가
+elif st.session_state.step == 11:
     st.title("근육 촉진 평가")
     st.markdown("---")
 
@@ -2327,7 +1864,7 @@ elif st.session_state.step == 12:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 11
+            st.session_state.step = 10
             st.rerun()
 
     with col2:
@@ -2338,11 +1875,11 @@ elif st.session_state.step == 12:
                 "palpation_lateral_pterygoid_widget": "palpation_lateral_pterygoid",
                 "pain_mapping_widget": "pain_mapping",
             }) 
-            st.session_state.step = 13
+            st.session_state.step = 12
             st.rerun()
 
-# STEP 13: 귀 관련 증상
-elif st.session_state.step == 13:
+# STEP 12: 귀 관련 증상
+elif st.session_state.step == 12:
     st.title("귀 관련 증상")
     st.markdown("---")
 
@@ -2404,7 +1941,7 @@ elif st.session_state.step == 13:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 12
+            st.session_state.step = 11
             st.rerun()
 
     with col2:
@@ -2415,11 +1952,10 @@ elif st.session_state.step == 13:
             elif "없음" in symptoms and len(symptoms) > 1:
                 st.warning("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
             else:
-                st.session_state.step = 14
+                st.session_state.step = 13
                 st.rerun()
-                
-# STEP 14 경추/목/어깨 관련 증상
-elif st.session_state.step == 14:
+
+elif st.session_state.step == 13:
     st.title("경추/목/어깨 관련 증상")
     st.markdown("---")
 
@@ -2475,7 +2011,7 @@ elif st.session_state.step == 14:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("◀ 이전 단계"):
-            st.session_state.step = 13
+            st.session_state.step = 12
             st.rerun()
 
     with col2:
@@ -2488,12 +2024,12 @@ elif st.session_state.step == 14:
             elif not trauma_ok:
                 st.warning("목 외상 여부를 선택해주세요.")
             else:
-                st.session_state.step = 15
+                st.session_state.step = 14
                 st.rerun()
 
 
-# STEP 15: 정서적 스트레스 이력
-elif st.session_state.step == 15:
+# STEP 14: 정서적 스트레스 이력
+elif st.session_state.step == 14:
     st.title("정서적 스트레스 이력")
     st.markdown("---")
 
@@ -2528,7 +2064,7 @@ elif st.session_state.step == 15:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 14
+            st.session_state.step = 13
             st.rerun()
 
     with col2:
@@ -2536,13 +2072,13 @@ elif st.session_state.step == 15:
             if st.session_state.get("stress_radio") == "선택 안 함":
                 st.warning("스트레스 여부를 선택해주세요.")
             else:
-                st.session_state.step = 16
+                st.session_state.step = 15
                 st.rerun()
 
                 
-# STEP 16: 과거 치과적 이력 (Past Dental History)
+# STEP 15: 과거 치과적 이력 (Past Dental History)
 
-elif st.session_state.step == 16:
+elif st.session_state.step == 15:
     st.title("과거 치과적 이력 (Past Dental History)")
     st.markdown("---")
 
@@ -2648,7 +2184,7 @@ elif st.session_state.step == 16:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 15
+            st.session_state.step = 14
             st.rerun()
 
     with col2:
@@ -2665,12 +2201,12 @@ elif st.session_state.step == 16:
                 for e in errors:
                     st.warning(e)
             else:
-                st.session_state.step = 17
+                st.session_state.step = 16
                 st.rerun()
 
 
-# STEP 17: 과거 의과적 이력 (Past Medical History)
-elif st.session_state.step == 17:
+# STEP 16: 과거 의과적 이력 (Past Medical History)
+elif st.session_state.step == 16:
     st.title("과거 의과적 이력 (Past Medical History)")
     st.markdown("---")
 
@@ -2703,17 +2239,17 @@ elif st.session_state.step == 17:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 16
+            st.session_state.step = 15
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.step = 18
+            st.session_state.step = 17
             st.rerun()
 
   
-# STEP 18: 자극 검사
-elif st.session_state.step == 18:
+# STEP 17: 자극 검사
+elif st.session_state.step == 17:
     st.title("자극 검사 (Provocation Tests)")
     st.markdown("---")
 
@@ -2787,16 +2323,16 @@ elif st.session_state.step == 18:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 17
+            st.session_state.step = 16
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.step = 19
+            st.session_state.step = 18
             st.rerun()
 
-# STEP 19: 기능 평가
-elif st.session_state.step == 19:
+# STEP 18: 기능 평가
+elif st.session_state.step == 18:
     st.title("기능 평가 (Functional Impact)")
     st.markdown("---")
 
@@ -2903,7 +2439,7 @@ elif st.session_state.step == 19:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 18
+            st.session_state.step = 17
             st.rerun()
 
     with col2:
@@ -2918,12 +2454,12 @@ elif st.session_state.step == 19:
                     st.warning(err)
             else:
                 save_session()                      # ← 최종 저장
-                st.session_state.step = 20
+                st.session_state.step = 19
                 st.rerun()
 
 
-# STEP 20: 결과
-elif st.session_state.step == 20:
+# STEP 19: 결과
+elif st.session_state.step == 19:
     st.title("📊 턱관절 질환 예비 진단 결과")
     st.markdown("---")
     results = compute_diagnoses(st.session_state)
