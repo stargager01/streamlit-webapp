@@ -1140,39 +1140,39 @@ elif st.session_state.step == 5:
                 st.rerun()
 
 
+# STEP 6: 빈도 및 시기, 강도 - 수정된 코드
 
-# STEP 6: 빈도 및 시기, 강도
 elif st.session_state.step == 6:
     st.title("현재 증상 (빈도 및 시기)")
     st.markdown("---")
 
-    # widget_key → state_key 매핑
+    # 위젯 키와 세션 상태 키 매핑
     widget_map = {
         "frequency_choice_widget": "frequency_choice",
         "pain_level_widget": "pain_level",
-        "time_morning_widget": "time_morning",
-        "time_afternoon_widget": "time_afternoon",
-        "time_evening_widget": "time_evening",
         "has_headache_widget": "has_headache_now",
         "headache_frequency_widget": "headache_frequency"
     }
-
+    
+    # 시간대 선택 옵션
     time_options = [
         {"key": "morning", "label": "오전"},
         {"key": "afternoon", "label": "오후"},
         {"key": "evening", "label": "저녁"},
     ]
+
     with st.container(border=True):
         st.markdown("**통증 또는 다른 증상이 얼마나 자주 발생하나요?**")
         freq_opts = ["주 1~2회", "주 3~4회", "주 5~6회", "매일", "선택 안 함"]
         st.radio(
-            "", freq_opts, index=4,
+            "",
+            options=freq_opts,
+            # ✅ 해결: session_state에 저장된 값을 기반으로 index를 동적으로 설정합니다.
+            index=freq_opts.index(st.session_state.get("frequency_choice", "선택 안 함")),
             key="frequency_choice_widget",
             on_change=sync_widget_key,
             args=("frequency_choice_widget", "frequency_choice")
         )
-
-       
 
         st.markdown("---")
         st.markdown("**(통증이 있을 시) 현재 통증 정도는 어느 정도인가요? (0=없음, 10=극심한 통증)**")
@@ -1186,17 +1186,11 @@ elif st.session_state.step == 6:
 
         st.markdown("---")
         st.markdown("**주로 어느 시간대에 발생하나요?**")
-        time_labels = {
-            "morning": "오전",
-            "afternoon": "오후",
-            "evening": "저녁",
-           
-        }
-        for key in ["morning", "afternoon", "evening"]:
-            widget_key = f"time_{key}_widget"
-            state_key = f"time_{key}"
+        for time_opt in time_options:
+            state_key = f"time_{time_opt['key']}"
+            widget_key = f"{state_key}_widget"
             st.checkbox(
-                label=time_labels[key],
+                label=time_opt['label'],
                 value=st.session_state.get(state_key, False),
                 key=widget_key,
                 on_change=sync_widget_key,
@@ -1205,111 +1199,110 @@ elif st.session_state.step == 6:
 
         st.markdown("---")
         st.markdown("**두통이 있나요?**")
+        has_headache_options = ["예", "아니오", "선택 안 함"]
         st.radio(
-            "", ["예", "아니오", "선택 안 함"],
-            index=["예", "아니오", "선택 안 함"].index(st.session_state.get("has_headache_now", "선택 안 함")),
+            "", 
+            options=has_headache_options,
+            index=has_headache_options.index(st.session_state.get("has_headache_now", "선택 안 함")),
             key="has_headache_widget",
-            on_change=reset_headache_details,
-            args=()
+            on_change=handle_headache_change # on_change 콜백으로 로직 통합
         )
 
-        st.session_state["has_headache_now"] = st.session_state.get("has_headache_widget")
-        
+        # '예'를 선택했을 때만 두통 관련 질문 표시
         if st.session_state.get("has_headache_now") == "예":
             st.markdown("---")
             st.markdown("**두통 부위를 모두 선택해주세요.**")
             headache_area_opts = ["이마", "측두부(관자놀이)", "뒤통수", "정수리"]
-            selected_areas = []
-            for area in headache_area_opts:
-                if st.checkbox(area, value=(area in st.session_state.get("headache_areas", [])), key=f"headache_area_{area}"):
-                    selected_areas.append(area)
+            
+            # 멀티셀렉트로 변경하여 상태 관리를 간소화
+            selected_areas = st.multiselect(
+                "두통 부위",
+                options=headache_area_opts,
+                default=st.session_state.get("headache_areas", []),
+                key="headache_areas_widget"
+            )
             st.session_state["headache_areas"] = selected_areas
 
 
-
             st.markdown("**현재 두통 강도는 얼마나 되나요? (0=없음, 10=극심한 통증)**")
-            st.session_state["headache_severity"] = st.slider("두통 강도", 0, 10, value=st.session_state.get("headache_severity", 0))
+            st.slider(
+                "두통 강도", 0, 10, 
+                value=st.session_state.get("headache_severity", 0),
+                key="headache_severity_widget",
+                on_change=sync_widget_key,
+                args=("headache_severity_widget", "headache_severity")
+            )
 
 
             st.markdown("**두통 빈도는 얼마나 자주 발생하나요?**")
             headache_freq_opts = ["주 1~2회", "주 3~4회", "주 5~6회", "매일", "선택 안 함"]
-
             st.radio(
-                "", headache_freq_opts,
+                "", 
+                options=headache_freq_opts,
                 index=headache_freq_opts.index(st.session_state.get("headache_frequency", "선택 안 함")),
                 key="headache_frequency_widget",
-                on_change=update_headache_frequency
+                on_change=sync_widget_key,
+                args=("headache_frequency_widget", "headache_frequency")
             )
             
             st.markdown("**두통을 유발하거나 악화시키는 요인이 있나요? (복수 선택 가능)**")
             trigger_opts = ["스트레스", "수면 부족", "음식 섭취", "소음", "밝은 빛"]
-            selected_triggers = []
-            for trig in trigger_opts:
-                if st.checkbox(trig, value=(trig in st.session_state.get("headache_triggers", [])), key=f"trigger_{trig}"):
-                    selected_triggers.append(trig)
+            selected_triggers = st.multiselect(
+                "유발/악화 요인",
+                options=trigger_opts,
+                default=st.session_state.get("headache_triggers", []),
+                key="headache_triggers_widget"
+            )
             st.session_state["headache_triggers"] = selected_triggers
-
-    
 
             st.markdown("**두통을 완화시키는 요인이 있나요? (복수 선택 가능)**")
             relief_opts = ["휴식", "약물", "안마", "수면"]
-            selected_reliefs = []
-            for rel in relief_opts:
-                if st.checkbox(rel, value=(rel in st.session_state.get("headache_reliefs", [])), key=f"relief_{rel}"):
-                    selected_reliefs.append(rel)
+            selected_reliefs = st.multiselect(
+                "완화 요인",
+                options=relief_opts,
+                default=st.session_state.get("headache_reliefs", []),
+                key="headache_reliefs_widget"
+            )
             st.session_state["headache_reliefs"] = selected_reliefs
-
-        
 
     st.markdown("---")
     col1, col2 = st.columns(2)
 
     with col1:
         if st.button("이전 단계(주호소 질문으로)"):
-            for key in list(st.session_state.keys()):
-                if any(s in key for s in [
-                    "jaw_", "pain_", "frequency", "time_", "headache"
-                ]):
-                    st.session_state.pop(key, None)
-            st.session_state.step = 2
+            # 관련된 키들을 삭제하는 대신, 이전 단계로만 이동
+            st.session_state.step = 2 
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
+            # 위젯 값들을 session_state로 최종 동기화
             sync_multiple_keys(widget_map)
 
             errors = []
+            
+            # 유효성 검사
+            if st.session_state.get("frequency_choice", "선택 안 함") == "선택 안 함":
+                errors.append("빈도 항목을 선택해주세요.")
 
-            freq = st.session_state.get("frequency_choice", "선택 안 함")
-            freq_other = st.session_state.get("frequency_other_text", "").strip()
-            freq_valid = freq not in ["선택 안 함", "기타"] or (freq == "기타" and freq_other != "")
-
-            time_valid = any([
-                st.session_state.get(f"time_{opt['key']}", False) for opt in time_options
-            ])
-
+            time_valid = any(st.session_state.get(f"time_{opt['key']}", False) for opt in time_options)
+            if not time_valid:
+                errors.append("시간대 항목을 하나 이상 선택해주세요.")
 
             if st.session_state.get("has_headache_now") == "예":
                 if not st.session_state.get("headache_areas"):
                     errors.append("두통 부위를 최소 1개 이상 선택해주세요.")
                 if st.session_state.get("headache_frequency") == "선택 안 함":
                     errors.append("두통 빈도를 선택해주세요.")
-                if st.session_state.get("headache_severity", 0) == 0:
-                    errors.append("두통 강도를 선택해주세요.")
-               
-
-            if not freq_valid:
-                errors.append("빈도 항목을 입력하거나 선택해주세요.")
-            if not time_valid:
-                errors.append("시간대 항목을 입력하거나 선택해주세요.")
-            selected_times = [opt['label'] for opt in time_options if st.session_state.get(f"time_{opt['key']}", False)]
-            st.session_state["selected_times"] = ", ".join(selected_times)
-
-
+            
             if errors:
                 for err in errors:
                     st.warning(err)
             else:
+                # PDF 출력을 위해 선택된 시간대 텍스트로 저장
+                selected_times_labels = [opt['label'] for opt in time_options if st.session_state.get(f"time_{opt['key']}")]
+                st.session_state["selected_times"] = ", ".join(selected_times_labels) if selected_times_labels else "없음"
+                
                 st.session_state.step = 7
                 st.rerun()
 
