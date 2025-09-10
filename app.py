@@ -1511,7 +1511,7 @@ elif st.session_state.step == 8:
             })
             st.session_state.step = 9
             st.rerun()
-
+ 
 # STEP 9: AR 기반 턱 분석
 elif st.session_state.step == 9:
     st.title(" 기반 실시간 턱 분석")
