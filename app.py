@@ -678,7 +678,8 @@ elif st.session_state.step == 2:
                 "선택 안 함"
             ],
             key="chief_complaint_widget",
-            index=4,
+            # 올바르게 구현된 예시
+            index=onset_options.index(st.session_state.get("onset", "선택 안 함")),
             label_visibility="collapsed",
             on_change=sync_widget_key,
             args=("chief_complaint_widget", "chief_complaint")
