@@ -1524,10 +1524,12 @@ elif st.session_state.step == 9:
         #html_code,
     # 2. 컴포넌트를 호출하고 반환 값을 받습니다.
     # key를 지정해야 Streamlit이 상태를 유지하고 값을 제대로 반환합니다.
-    measurement_result = st.components.v1.html(html_code,
-        height=700,
-        scrolling=True,
-        key="jaw_analyzer_component"
+    measurement_result = st.components.v1.html(
+        html_code,
+        height=700,                     # 필수
+        width=1200,                     # 선택
+        scrolling=True,                 # 선택
+        element_id="jaw_analyzer_component"  # key → element_id 로 교체
     )
 
     # 3. 반환된 값이 있으면 세션 상태에 저장합니다.
