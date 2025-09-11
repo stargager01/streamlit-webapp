@@ -5,7 +5,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 import datetime
 import json
-
+# app.py 상단에 이 import 구문을 추가하세요
+from jaw_analyzer import jaw_analyzer_component
 
 diagnosis_keys = {
     "muscle_pressure_2s_value": "선택 안 함",
@@ -1514,30 +1515,22 @@ elif st.session_state.step == 8:
  
 # STEP 9: AR 기반 턱 분석
 elif st.session_state.step == 9:
-    st.title(" 기반 실시간 턱 분석")
+    st.title("AR 기반 실시간 턱 분석")
     st.markdown("---")
+    st.info("카메라를 시작하고 입을 천천히 최대한 벌렸다가 다물어주세요. 자동 캡처가 완료되면 '분석 결과 제출' 버튼이 활성화됩니다.")
 
-    # 1. HTML 파일을 읽어옵니다 (또는 긴 문자열로 유지).
-    # 실수를 줄이기 위해 파일을 분리하는 것을 추천합니다.
-    with open("jaw_analyzer.html", "r", encoding="utf-8") as f:
-       html_code = f.read()
-        #html_code,
-    # 2. 컴포넌트를 호출하고 반환 값을 받습니다.
-    # key를 지정해야 Streamlit이 상태를 유지하고 값을 제대로 반환합니다.
-    measurement_result = st.components.v1.html(
-        html_code,
-        height=700,                     # 필수
-        width=1200,                     # 선택
-        scrolling=True
-    )
+    # 새로운 커스텀 컴포넌트를 호출합니다. 이제 이 함수는 딕셔너리를 반환합니다!
+    measurement_result = jaw_analyzer_component(key="jaw_analyzer")
 
-    # 3. 반환된 값이 있으면 세션 상태에 저장합니다.
+    # 이제 이 `if` 블록이 정상적으로 작동할 것입니다!
     if measurement_result:
         st.session_state['ai_max_opening'] = measurement_result.get('maxOpening')
         st.session_state['ai_deviation'] = measurement_result.get('deviation')
-        st.session_state['ai_deflection'] = measurement_result.get('deflection')
-        st.success("AI 측정값이 기록되었습니다!")
-        st.write(measurement_result) # 확인용으로 출력
+        # 안전을 위해 .get()을 사용하고, diagnosisLabel을 deflection에 매핑하는 예시입니다.
+        st.session_state['ai_deflection'] = measurement_result.get('diagnosisLabel')
+
+        st.success("AI 측정값이 기록되었습니다! '다음 단계' 버튼을 눌러주세요.")
+        st.write("측정된 데이터:", measurement_result) # 디버깅 목적으로 출력
 
     st.markdown("---")
     # 이전/다음 버튼
@@ -1547,7 +1540,9 @@ elif st.session_state.step == 9:
             st.session_state.step = 8
             st.rerun()
     with col2:
-        if st.button("다음 단계로 이동 👉"):
+        # 컴포넌트로부터 결과를 받을 때까지 '다음' 버튼을 비활성화합니다.
+        next_button_disabled = not measurement_result
+        if st.button("다음 단계로 이동 👉", disabled=next_button_disabled):
             st.session_state.step = 10
             st.rerun()
 	
