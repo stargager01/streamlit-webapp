@@ -219,6 +219,7 @@
             <button id="resetBtn">🔄 초기화</button>
             <button id="captureBtn" disabled>📸 수동 캡처</button>
 			<button id="downloadBtn">💾 이미지 저장</button>
+			<button id="sendToStreamlitBtn" disabled>✅ 분석 결과 제출</button>
         </div>
 
         <div class="main-content">
@@ -281,7 +282,7 @@
             </div>
         </div>
     </div>
-
+	<script src="https://cdn.jsdelivr.net/gh/streamlit/streamlit/frontend/src/streamlit-component-lib.js"></script>
     <!-- MediaPipe FaceMesh 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
@@ -964,8 +965,11 @@
 		  link.click();
 		});
 
-        // 페이지 로드 시 초기화
+		// 페이지 로드 시 초기화
         window.addEventListener('load', () => {
+            // Streamlit에 컴포넌트가 준비되었고 높이가 700px임을 알립니다. 🤝
+            Streamlit.setFrameHeight(700); 
+
             resetMeasurements();
             console.log('얼굴 측정 시스템 준비 완료');
         });
@@ -974,6 +978,35 @@
         window.addEventListener('beforeunload', () => {
             stopCamera();
         });
+		
+		// 0911
+
+		const sendToStreamlitBtn = document.getElementById('sendToStreamlitBtn');
+
+		// 이 함수는 유효한 측정이 완료되었을 때 제출 버튼을 활성화하기 위해 호출됩니다.
+		function checkMeasurementAndEnableSubmit() {
+			if (maxMouthOpen > 20 && autoCaptureDone) { // 유효한 자동 캡처 이후에만 활성화
+				sendToStreamlitBtn.disabled = false;
+			}
+		}
+
+		// 이 함수를 주기적으로 호출하여 상태를 확인합니다.
+		setInterval(checkMeasurementAndEnableSubmit, 1000);
+
+		// 새로 만든 버튼에 클릭 이벤트 리스너를 추가합니다.
+		sendToStreamlitBtn.addEventListener('click', () => {
+			// 파이썬으로 다시 보낼 데이터 객체를 준비합니다.
+			const finalData = {
+				maxOpening: maxMouthOpen.toFixed(1),
+				deviation: document.getElementById('deviation').textContent,
+				diagnosisLabel: lastDiagnosis ? lastDiagnosis.label : "N/A",
+				// 필요한 다른 값들도 여기에 추가할 수 있습니다.
+			};
+
+			// 이 함수가 바로 데이터를 Streamlit 스크립트로 다시 보내주는 핵심 함수입니다!
+			Streamlit.setComponentValue(finalData);
+		});
+		
     </script>
 </body>
 </html>
