@@ -11,7 +11,9 @@
             padding: 0;
             box-sizing: border-box;
         }
-
+		html, body {
+			height: 1400px !important;
+		}
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -967,6 +969,11 @@
 		  link.href = latest.imageUrl;
 		  link.download = `capture_${Date.now()}.jpg`; // jpeg가 png보다 보통 빠름
 		  link.click();
+		});
+		window.addEventListener('DOMContentLoaded', () => {
+			setTimeout(() => {
+				Streamlit.setFrameHeight(1400);
+			}, 100); // 0.1초 지연
 		});
 
 		// 페이지 로드 시 초기화
