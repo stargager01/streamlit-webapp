@@ -217,6 +217,7 @@
         </div>
 
         <div class="controls">
+			<button id="toggleMeasureBtn">실시간 측정 숨기기</button>
             <button id="startBtn">📷 카메라 시작</button>
             <button id="stopBtn" disabled>⏹ 중지</button>
             <button id="resetBtn">🔄 초기화</button>
@@ -1028,7 +1029,19 @@
 			// 이 함수가 바로 데이터를 Streamlit 스크립트로 다시 보내주는 핵심 함수입니다!
 			Streamlit.setComponentValue(finalData);
 		});
-		
+		// 실시간 측정 화면 요소 (예: video 또는 canvas)
+		const measureArea = document.getElementById('measureArea'); // 측정 화면 영역
+		const toggleBtn = document.getElementById('toggleMeasureBtn');
+
+		toggleBtn.addEventListener('click', () => {
+			if (measureArea.style.display === 'none') {
+				measureArea.style.display = 'block';
+				toggleBtn.textContent = '실시간 측정 숨기기';
+			} else {
+				measureArea.style.display = 'none';
+				toggleBtn.textContent = '실시간 측정 보이기';
+			}
+		});
     </script>
 </body>
 </html>
