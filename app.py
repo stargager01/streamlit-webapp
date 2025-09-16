@@ -13,7 +13,7 @@ import streamlit.components.v1 as components
 with open("index.html", "r", encoding="utf-8") as f:
     html_content = f.read()
 
-components.html(html_content, height=1400, scrolling=False)
+components.html(html_content, height=800, scrolling=False)
 
 
 diagnosis_keys = {
@@ -1532,7 +1532,7 @@ elif st.session_state.step == 9:
     #measurement_result = jaw_analyzer_component(key="jaw_analyzer")
     with open("index.html", "r", encoding="utf-8") as f:
         html_content = f.read()
-    components.html(html_content, height=1400, scrolling=False)
+    components.html(html_content, height=800, scrolling=False)
 
     # 이제 이 `if` 블록이 정상적으로 작동할 것입니다!
     if measurement_result:
