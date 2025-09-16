@@ -750,10 +750,21 @@
 			captureCtx.stroke();
 			captureCtx.setLineDash([]);
 
-			// 텍스트
+			// 텍스트 출력 부분 수정
 			captureCtx.fillStyle = '#000';
 			captureCtx.font = '16px Arial';
+ 
+			// 기존: 최대 입벌림만 출력
+			// captureCtx.fillText(`최대 입벌림: ${maxMouthOpen.toFixed(1)}mm`, 20, 30);
+
+			// 수정: 최대 입벌림 + 자동 판정 최대 편위값
 			captureCtx.fillText(`최대 입벌림: ${maxMouthOpen.toFixed(1)}mm`, 20, 30);
+
+			if (lastDiagnosis && lastDiagnosis.metrics && typeof lastDiagnosis.metrics.maxAbsDev === 'number') {
+				captureCtx.fillText(`최대 편위: ${lastDiagnosis.metrics.maxAbsDev.toFixed(1)}mm`, 20, 55);
+			}
+
+
 
 			// 3) 인코딩은 비동기로(메인 스레드 블로킹 제거)
 			//    PNG보다 빠른 JPEG/WebP도 고려 가능
