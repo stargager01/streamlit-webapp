@@ -6,7 +6,15 @@ from io import BytesIO
 import datetime
 import json
 # app.py 상단에 이 import 구문을 추가하세요
-from jaw_analyzer import jaw_analyzer_component
+#from jaw_analyzer import jaw_analyzer_component
+import streamlit.components.v1 as components
+
+# index.html 읽어서 height 지정
+with open("index.html", "r", encoding="utf-8") as f:
+    html_content = f.read()
+
+components.html(html_content, height=1400, scrolling=False)
+
 
 diagnosis_keys = {
     "muscle_pressure_2s_value": "선택 안 함",
@@ -27,6 +35,7 @@ diagnosis_keys = {
 if 'step' not in st.session_state:
     st.session_state.step = 0
     st.session_state.validation_errors = {}
+
 
 for key, default in diagnosis_keys.items():
     if key not in st.session_state:
@@ -1515,12 +1524,15 @@ elif st.session_state.step == 8:
  
 # STEP 9: AR 기반 턱 분석
 elif st.session_state.step == 9:
-    st.title("AR 기반 실시간 턱 분석")
-    st.markdown("---")
-    st.info("카메라를 시작하고 입을 천천히 최대한 벌렸다가 다물어주세요. 자동 캡처가 완료되면 '분석 결과 제출' 버튼이 활성화됩니다.")
+    #st.title("AR 기반 실시간 턱 분석")
+    #st.markdown("---")
+    #st.info("카메라를 시작하고 입을 천천히 최대한 벌렸다가 다물어주세요. 자동 캡처가 완료되면 '분석 결과 제출' 버튼이 활성화됩니다.")
 
     # 새로운 커스텀 컴포넌트를 호출합니다. 이제 이 함수는 딕셔너리를 반환합니다!
-    measurement_result = jaw_analyzer_component(key="jaw_analyzer")
+    #measurement_result = jaw_analyzer_component(key="jaw_analyzer")
+    with open("index.html", "r", encoding="utf-8") as f:
+        html_content = f.read()
+    components.html(html_content, height=1400, scrolling=False)
 
     # 이제 이 `if` 블록이 정상적으로 작동할 것입니다!
     if measurement_result:
