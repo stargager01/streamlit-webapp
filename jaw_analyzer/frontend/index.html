@@ -972,8 +972,8 @@
 		// 페이지 로드 시 초기화
         window.addEventListener('load', () => {
             // 컴포넌트의 실제 콘텐츠 높이를 계산해서 Streamlit에 알립니다. 🤝
-            Streamlit.setFrameHeight(document.body.scrollHeight); 
-
+			// 고정 높이 1400px로 설정
+			Streamlit.setFrameHeight(1400);
             resetMeasurements();
             console.log('얼굴 측정 시스템 준비 완료');
         });
