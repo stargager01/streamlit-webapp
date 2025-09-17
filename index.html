@@ -505,42 +505,56 @@
             
             const openingPixels = Math.abs(upperLip.y - lowerLip.y) * canvasElement.height;
             const openingMM = openingPixels / pixelsPerMM;
-            
-			// 1. 실시간 개구량 표시
-			maxOpeningValue.textContent = `${openingMM.toFixed(1)} mm`;
+                        if (openingMM > maxOpeningRecord) {
+                maxOpeningRecord = openingMM;
+                maxOpeningValue.textContent = `${openingMM.toFixed(1)} mm`;
+            } 
+			// 턱 편이 계산
+			const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
+			const noseTip = landmarks[LANDMARKS.NOSE_TIP];
+			const chinTip = landmarks[LANDMARKS.CHIN_TIP];
 
-			// 2. 최대값 갱신
-			if (openingMM > maxOpeningRecord) {
-				maxOpeningRecord = openingMM;
+			// 중심선의 x 좌표 계산 (미간과 코끝의 평균)
+			const centerLineX = (forehead.x + noseTip.x) / 2;
+
+			// 턱 끝의 편이 계산
+			const deviationPixels = (chinTip.x - centerLineX) * canvasElement.width;
+			const deviationMM = Math.abs(deviationPixels) / pixelsPerMM;
+
+			// 편이 정도 판정 함수
+			function getDeviationGrade(mm) {
+				if (mm <= 2) {
+					return { grade: 'Normal', color: '#10b981' }; // 녹색
+				} else if (mm <= 4) {
+					return { grade: 'Deflection', color: '#f59e0b' }; // 주황색
+				} else {
+					return { grade: 'Deviation', color: '#ef4444' }; // 빨간색
+				}
 			}
 
-            
-            // 3. 턱 편이 계산
-            const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
-            const noseTip = landmarks[LANDMARKS.NOSE_TIP];
-            const chinTip = landmarks[LANDMARKS.CHIN_TIP];
-            
-            // 중심선의 x 좌표 계산 (미간과 코끝의 평균)
-            const centerLineX = (forehead.x + noseTip.x) / 2;
-            
-            // 턱 끝의 편이 계산
-            const deviationPixels = (chinTip.x - centerLineX) * canvasElement.width;
-            const deviationMM = Math.abs(deviationPixels) / pixelsPerMM;
-			// 4. 턱끝좌표기록
-			const chinX = chinTip.x * canvasElement.width;
-			const chinY = chinTip.y * canvasElement.height;
-			trajectoryPoints.push({ x: chinX, y: chinY });
-
-			// 궤적 그리기
-			drawTrajectory();
-            if (deviationMM > maxDeviationRecord.value) {
-                maxDeviationRecord.value = deviationMM;
-                maxDeviationRecord.direction = deviationPixels > 0 ? 'Right' : 'Left';
-                
-                const directionKor = deviationPixels > 0 ? 'Rt.' : 'Lt.';
-                jawDeviationValue.textContent = `${directionKor} ${deviationMM.toFixed(1)} mm`;
-            }
-            
+			// 최대 편이 기록 업데이트
+			if (deviationMM > maxDeviationRecord.value) {
+				maxDeviationRecord.value = deviationMM;
+				maxDeviationRecord.direction = deviationPixels > 0 ? 'Right' : 'Left';
+				
+				// 편이 등급 판정
+				const gradeInfo = getDeviationGrade(deviationMM);
+				
+				// 표시 텍스트 생성
+				let displayText;
+				if (gradeInfo.grade === 'Normal') {
+					// Normal인 경우 방향 표시 없음
+					displayText = `Normal (${deviationMM.toFixed(1)} mm)`;
+				} else {
+					// Deflection 또는 Deviation인 경우 방향 표시
+					const directionKor = deviationPixels > 0 ? 'Rt.' : 'Lt.';
+					displayText = `${gradeInfo.grade} ${directionKor} (${deviationMM.toFixed(1)} mm)`;
+				}
+				
+				jawDeviationValue.textContent = displayText;
+				jawDeviationValue.style.color = gradeInfo.color;
+			}
+			
             // 시각적 피드백
             drawMeasurementLines(upperLip, lowerLip, chinTip, centerLineX);
         }
@@ -789,6 +803,36 @@
 		  link.click();
 		}
 		
+        resetBtn.addEventListener('click', () => {
+            // 모든 값 초기화
+            isMeasuring = false;
+            isCalibrated = false;
+            isCalibrating = false;
+            maxOpeningRecord = 0;
+            maxDeviationRecord = { value: 0, direction: 'Center' };
+            pixelsPerMM = 1;
+            
+            // UI 초기화
+            maxOpeningValue.textContent = '0.0 mm';
+			jawDeviationValue.textContent = 'Normal (0.0 mm)';
+			jawDeviationValue.style.color = '#667eea'; // 기본 색상
+
+            headTiltValue.textContent = '0.0°';
+            
+            // 버튼 상태 초기화
+            calibrateBtn.disabled = false;
+            calibrateBtn.textContent = '보정 시작';
+            startMeasureBtn.disabled = true;
+            stopMeasureBtn.disabled = true;
+            
+            // 보정 섹션 초기화
+            calibrationSection.classList.remove('completed');
+            calibrationSection.querySelector('.calibration-info').innerHTML = 
+                '신용카드나 주민등록증(가로 85.6mm)을<br>이마에 대고 \'보정 시작\' 버튼을 누르세요';
+            
+            updateMessage('시스템이 초기화되었습니다.', 'info');
+            setTimeout(() => messageBox.style.display = 'none', 3000);
+        });
         // 페이지 로드 시 초기화
         window.addEventListener('load', () => {
             initializeFaceMesh();
