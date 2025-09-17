@@ -653,16 +653,19 @@
 
 		startMeasureBtn.addEventListener('click', () => {
 			if (isCalibrated && !isMeasuring) {
+				// 완전 초기화
+				deviationHistory = [];
+				trajectoryPoints = [];
+				maxOpeningRecord = 0;
+				maxDeviationRecord = { value: 0, direction: 'Center' };
+				
+				// UI 초기화
+				jawDeviationValue.textContent = 'Normal (0.0 mm)';
+				jawDeviationValue.style.color = '#10b981';
+				
 				isMeasuring = true;
 				startMeasureBtn.disabled = true;
 				stopMeasureBtn.disabled = false;
-				
-				// 히스토리 초기화 추가
-				deviationHistory = [];
-				trajectoryPoints = [];
-				
-				maxOpeningRecord = 0;
-				maxDeviationRecord = { value: 0, direction: 'Center' };
 				
 				updateMessage('측정을 시작합니다. 입을 천천히 벌려주세요.', 'info');
 				setTimeout(() => messageBox.style.display = 'none', 3000);
