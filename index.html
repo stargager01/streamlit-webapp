@@ -313,6 +313,8 @@
         let maxDeviationRecord = { value: 0, direction: 'Center' };
         let calibrationPoints = [];
         let isCalibrating = false;
+		let deviationHistory = [];
+		const HISTORY_SIZE = 10;
 
         // 랜드마크 인덱스 정의
         const LANDMARKS = {
@@ -521,17 +523,24 @@
 			const deviationPixels = (chinTip.x - centerLineX) * canvasElement.width;
 			const deviationMM = Math.abs(deviationPixels) / pixelsPerMM;
 
+			// 이동 평균 필터 적용
+			deviationHistory.push(deviationMM);
+			if (deviationHistory.length > HISTORY_SIZE) {
+				deviationHistory.shift();
+			}
+			// 평균값 계산
+			const avgDeviationMM = deviationHistory.reduce((a, b) => a + b, 0) / deviationHistory.length;
+			
 			// 편이 정도 판정 함수
 			function getDeviationGrade(mm) {
-				if (mm <= 2) {
+				if (mm <= 3) {
 					return { grade: 'Normal', color: '#10b981' }; // 녹색
-				} else if (mm <= 4) {
+				} else if (mm <= 6) {
 					return { grade: 'Deflection', color: '#f59e0b' }; // 주황색
 				} else {
 					return { grade: 'Deviation', color: '#ef4444' }; // 빨간색
 				}
 			}
-
 			// 최대 편이 기록 업데이트
 			if (deviationMM > maxDeviationRecord.value) {
 				maxDeviationRecord.value = deviationMM;
@@ -833,6 +842,22 @@
             updateMessage('시스템이 초기화되었습니다.', 'info');
             setTimeout(() => messageBox.style.display = 'none', 3000);
         });
+		
+		// 1. 보정 계산 개선 - handleCalibration 함수 수정
+		function handleCalibration(landmarks) {
+			// 실제 카드 감지 시뮬레이션 대신 얼굴 폭 기반 보정
+			// 평균 성인 얼굴 폭: 약 140-150mm
+			const leftCheek = landmarks[234];  // 왼쪽 뺨
+			const rightCheek = landmarks[454]; // 오른쪽 뺨
+			
+			const faceWidthPixels = Math.abs(rightCheek.x - leftCheek.x) * canvasElement.width;
+			const estimatedFaceWidthMM = 145; // 평균 얼굴 폭
+			
+			pixelsPerMM = faceWidthPixels / estimatedFaceWidthMM;
+			
+			// 보정값 검증
+			console.log(`보정: ${pixelsPerMM.toFixed(2)} pixels/mm (얼굴폭: ${faceWidthPixels.toFixed(0)}px)`);
+		}
         // 페이지 로드 시 초기화
         window.addEventListener('load', () => {
             initializeFaceMesh();
