@@ -347,15 +347,31 @@
 
 		function drawTrajectory() {
 			if (trajectoryPoints.length < 2) return;
-
-			canvasCtx.beginPath();
-			canvasCtx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+			
+			// 그라데이션 효과를 위한 설정
 			for (let i = 1; i < trajectoryPoints.length; i++) {
+				canvasCtx.beginPath();
+				canvasCtx.moveTo(trajectoryPoints[i - 1].x, trajectoryPoints[i - 1].y);
 				canvasCtx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+				
+				// 최근 포인트일수록 진하게 표시
+				const opacity = (i / trajectoryPoints.length) * 0.8;
+				canvasCtx.strokeStyle = `rgba(255, 165, 0, ${opacity})`;
+				canvasCtx.lineWidth = 2 + (i / trajectoryPoints.length) * 2;
+				canvasCtx.stroke();
 			}
-			canvasCtx.strokeStyle = 'rgba(255, 165, 0, 0.8)'; // 주황색
-			canvasCtx.lineWidth = 2;
-			canvasCtx.stroke();
+			
+			// 현재 위치 강조 표시
+			if (trajectoryPoints.length > 0) {
+				const lastPoint = trajectoryPoints[trajectoryPoints.length - 1];
+				canvasCtx.beginPath();
+				canvasCtx.arc(lastPoint.x, lastPoint.y, 5, 0, 2 * Math.PI);
+				canvasCtx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+				canvasCtx.fill();
+				canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+				canvasCtx.lineWidth = 2;
+				canvasCtx.stroke();
+			}
 		}
 
         // 초기화
@@ -418,6 +434,8 @@
                 // 측정 모드
                 if (isMeasuring && isCalibrated) {
                     measureMetrics(landmarks);
+					// 궤적 그리기 추가
+					drawTrajectory();					
                 }
                 
                 // 얼굴 기울기 계산 (항상 표시)
@@ -488,7 +506,13 @@
 			const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
 			const noseTip = landmarks[LANDMARKS.NOSE_TIP];
 			const chinTip = landmarks[LANDMARKS.CHIN_TIP];
-
+			const chinX = chinTip.x * canvasElement.width;
+			const chinY = chinTip.y * canvasElement.height;
+			// 궤적 포인트 추가 (최대 100개 유지)
+			trajectoryPoints.push({ x: chinX, y: chinY });
+			if (trajectoryPoints.length > 100) {
+				trajectoryPoints.shift();
+			}			
 			// 중심선의 x 좌표 계산 (미간과 코끝의 평균)
 			const centerLineX = (forehead.x + noseTip.x) / 2;
 
@@ -745,7 +769,19 @@
 
 		  // 2) 분석 오버레이 캔버스 합성 (현재 그려진 랜드마크/선 등)
 		  ctx.drawImage(canvasElement, 0, 0, width, height);
-
+			// 2-1) 궤적을 다시 그려서 더 선명하게 (선택사항)
+			if (trajectoryPoints.length > 1) {
+				for (let i = 1; i < trajectoryPoints.length; i++) {
+					ctx.beginPath();
+					ctx.moveTo(trajectoryPoints[i - 1].x, trajectoryPoints[i - 1].y);
+					ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+					
+					const opacity = (i / trajectoryPoints.length) * 0.9;
+					ctx.strokeStyle = `rgba(255, 165, 0, ${opacity})`;
+					ctx.lineWidth = 3;
+					ctx.stroke();
+				}
+			}
 		  // 3) 측정 텍스트 오버레이 (최대개구량, 턱편이판정, 필요시 머리 기울기)
 		  const maxOpeningText = maxOpeningValue.textContent;      // e.g., "43.2 mm"
 		  const jawText = jawDeviationValue.textContent;           // e.g., "Rt. 2.5 mm" 또는 "중앙"
@@ -798,7 +834,9 @@
             maxOpeningRecord = 0;
             maxDeviationRecord = { value: 0, direction: 'Center' };
             pixelsPerMM = 1;
-            
+			// 궤적 초기화 추가
+			trajectoryPoints = [];
+			deviationHistory = [];
             // UI 초기화
             maxOpeningValue.textContent = '0.0 mm';
 			jawDeviationValue.textContent = 'Normal (0.0 mm)';
