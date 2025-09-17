@@ -646,7 +646,16 @@
 					
 					isCalibrated = true;
 					isCalibrating = false;
-					// ...
+					// 버튼 활성화
+					startMeasureBtn.disabled = false;
+					calibrateBtn.disabled = true;
+					calibrateBtn.textContent = '보정 완료';
+
+					// UI 표시
+					calibrationSection.classList.add('completed');
+					calibrationSection.querySelector('.calibration-info').textContent = '보정이 완료되었습니다.';
+					updateMessage('보정이 완료되었습니다. 이제 측정을 시작할 수 있습니다.', 'success');
+					setTimeout(() => messageBox.style.display = 'none', 3000);
 				}, 3000);
 			}
 		});
