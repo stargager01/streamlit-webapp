@@ -13,7 +13,7 @@ import streamlit.components.v1 as components
 with open("index.html", "r", encoding="utf-8") as f:
     html_content = f.read()
 
-components.html(html_content, height=1400, scrolling=False)
+components.html(html_content, height=800, scrolling=False)
 
 
 diagnosis_keys = {
@@ -35,6 +35,7 @@ diagnosis_keys = {
 if 'step' not in st.session_state:
     st.session_state.step = 0
     st.session_state.validation_errors = {}
+
 
 for key, default in diagnosis_keys.items():
     if key not in st.session_state:
@@ -498,13 +499,32 @@ def restart_app():
 # 총 단계 수 (0부터 시작)
 total_steps = 20 
 # --- 사이드바 ---
-st.sidebar.button(
-    "🔄 처음부터 다시 시작",
-    key="btn_request_reset",
-    on_click=restart_app
-)
+
+# 측정화면 토글 추가 (STEP 9일 때만 표시)
+if st.session_state.step == 9:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📹 측정화면 설정")
+    
+    # 토글 스위치
+    show_measurement = st.sidebar.checkbox(
+        "측정화면 표시",
+        value=st.session_state.get('show_measurement', True),
+        key="measurement_toggle"
+    )
+    
+    # 상태 업데이트
+    if show_measurement != st.session_state.get('show_measurement', True):
+        st.session_state.show_measurement = show_measurement
+        st.rerun()
+    
+    # 설명 추가
+    if show_measurement:
+        st.sidebar.success("✅ 측정화면이 활성화되었습니다")
+    else:
+        st.sidebar.info("💡 측정화면이 숨겨졌습니다. 수동 입력 모드입니다.")
+
 # 사이드바: 저장·불러오기 버튼
-if st.sidebar.button("📥 저장하기", on_click=save_session):
+if st.sidebar.button("💾 저장하기", on_click=save_session):
     pass
 
 if st.sidebar.button("📂 불러오기", on_click=load_session):
@@ -1520,10 +1540,76 @@ elif st.session_state.step == 8:
             })
             st.session_state.step = 9
             st.rerun()
-
-
-# STEP 9: 턱 운동 범위 및 관찰2 (Range of Motion & Observations)
+ 
+# STEP 9: AR 기반 턱 분석
 elif st.session_state.step == 9:
+    st.title("AR 기반 실시간 턱 분석")
+    st.markdown("---")
+    
+    # 측정화면 표시 상태를 세션 상태에 저장
+    if 'show_measurement' not in st.session_state:
+        st.session_state.show_measurement = True
+    
+    # 사이드바에 토글 버튼 추가 (이 부분은 사이드바 섹션에 추가)
+    # 아래 코드를 사이드바 섹션 (line 700 근처)에 추가하세요
+    
+    # 측정화면이 표시되는 경우에만 보여주기
+    if st.session_state.show_measurement:
+        st.info("카메라를 시작하고 입을 천천히 최대한 벌렸다가 다물어주세요.")
+        
+        with open("index.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+        components.html(html_content, height=800, scrolling=False)
+        
+        # 측정 결과를 수동으로 입력받는 폼
+        with st.expander("📝 측정 결과 수동 입력"):
+            col1, col2 = st.columns(2)
+            with col1:
+                max_opening = st.number_input("최대 개구량 (mm)", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
+            with col2:
+                deviation = st.selectbox("턱 편이 방향", ["없음", "왼쪽", "오른쪽"])
+            
+            if st.button("측정값 저장"):
+                st.session_state['ai_max_opening'] = max_opening
+                st.session_state['ai_deviation'] = deviation
+                st.session_state['ai_deflection'] = "정상" if deviation == "없음" else f"{deviation} 편향"
+                st.success("측정값이 저장되었습니다!")
+    else:
+        st.warning("📹 측정화면이 숨겨져 있습니다. 사이드바에서 '측정화면 표시'를 켜주세요.")
+        
+        # 측정화면 없이도 진행할 수 있도록 수동 입력 옵션 제공
+        st.markdown("### 수동 측정값 입력")
+        col1, col2 = st.columns(2)
+        with col1:
+            max_opening = st.number_input("최대 개구량 (mm)", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
+        with col2:
+            deviation = st.selectbox("턱 편이 방향", ["없음", "왼쪽", "오른쪽"])
+        
+        if st.button("측정값 저장", type="primary"):
+            st.session_state['ai_max_opening'] = max_opening
+            st.session_state['ai_deviation'] = deviation
+            st.session_state['ai_deflection'] = "정상" if deviation == "없음" else f"{deviation} 편향"
+            st.success("측정값이 저장되었습니다!")
+    
+    st.markdown("---")
+    
+    # 이전/다음 버튼
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("이전 단계"):
+            st.session_state.step = 8
+            st.rerun()
+    with col2:
+        # 측정값이 입력되었는지 확인
+        has_measurement = 'ai_max_opening' in st.session_state
+        if st.button("다음 단계로 이동 👉", disabled=not has_measurement):
+            st.session_state.step = 10
+            st.rerun()
+        if not has_measurement:
+            st.caption("측정값을 입력한 후 다음 단계로 진행할 수 있습니다.")
+	
+# STEP 10: 턱 운동 범위 및 관찰2 (Range of Motion & Observations)
+elif st.session_state.step == 10:
     st.title("턱 운동 범위 및 관찰 (Range of Motion & Observations)")
     st.markdown("---")
     st.markdown(
@@ -1660,7 +1746,7 @@ elif st.session_state.step == 9:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 8
+            st.session_state.step = 9
             st.rerun()
 
     with col2:
@@ -1678,12 +1764,12 @@ elif st.session_state.step == 9:
                 "occlusion_widget": "occlusion",
                 "occlusion_shift_widget": "occlusion_shift"
             })
-            st.session_state.step = 10
+            st.session_state.step = 11
             st.rerun()
 
 
-# STEP 10: 턱 운동 범위 및 관찰3 (Range of Motion & Observations)
-elif st.session_state.step == 10:
+# STEP 11: 턱 운동 범위 및 관찰3 (Range of Motion & Observations)
+elif st.session_state.step == 11:
     st.title("턱 운동 범위 및 관찰 (Range of Motion & Observations)")
     st.markdown("---")
     st.markdown(
@@ -1763,19 +1849,19 @@ elif st.session_state.step == 10:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 9
+            st.session_state.step = 10
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.step = 11
+            st.session_state.step = 12
             st.rerun()
 
 
 
 
-# STEP 11: 근육 촉진 평가
-elif st.session_state.step == 11:
+# STEP 12: 근육 촉진 평가
+elif st.session_state.step == 12:
     st.title("근육 촉진 평가")
     st.markdown("---")
 
@@ -1835,7 +1921,7 @@ elif st.session_state.step == 11:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 10
+            st.session_state.step = 11
             st.rerun()
 
     with col2:
@@ -1846,11 +1932,11 @@ elif st.session_state.step == 11:
                 "palpation_lateral_pterygoid_widget": "palpation_lateral_pterygoid",
                 "pain_mapping_widget": "pain_mapping",
             }) 
-            st.session_state.step = 12
+            st.session_state.step = 13
             st.rerun()
 
-# STEP 12: 귀 관련 증상
-elif st.session_state.step == 12:
+# STEP 13: 귀 관련 증상
+elif st.session_state.step == 13:
     st.title("귀 관련 증상")
     st.markdown("---")
 
@@ -1912,7 +1998,7 @@ elif st.session_state.step == 12:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 11
+            st.session_state.step = 12
             st.rerun()
 
     with col2:
@@ -1923,10 +2009,11 @@ elif st.session_state.step == 12:
             elif "없음" in symptoms and len(symptoms) > 1:
                 st.warning("'없음'과 다른 증상을 동시에 선택할 수 없습니다. 다시 확인해주세요.")
             else:
-                st.session_state.step = 13
+                st.session_state.step = 14
                 st.rerun()
-
-elif st.session_state.step == 13:
+                
+# STEP 14 경추/목/어깨 관련 증상
+elif st.session_state.step == 14:
     st.title("경추/목/어깨 관련 증상")
     st.markdown("---")
 
@@ -1982,7 +2069,7 @@ elif st.session_state.step == 13:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("◀ 이전 단계"):
-            st.session_state.step = 12
+            st.session_state.step = 13
             st.rerun()
 
     with col2:
@@ -1995,12 +2082,12 @@ elif st.session_state.step == 13:
             elif not trauma_ok:
                 st.warning("목 외상 여부를 선택해주세요.")
             else:
-                st.session_state.step = 14
+                st.session_state.step = 15
                 st.rerun()
 
 
-# STEP 14: 정서적 스트레스 이력
-elif st.session_state.step == 14:
+# STEP 15: 정서적 스트레스 이력
+elif st.session_state.step == 15:
     st.title("정서적 스트레스 이력")
     st.markdown("---")
 
@@ -2035,7 +2122,7 @@ elif st.session_state.step == 14:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 13
+            st.session_state.step = 14
             st.rerun()
 
     with col2:
@@ -2043,13 +2130,13 @@ elif st.session_state.step == 14:
             if st.session_state.get("stress_radio") == "선택 안 함":
                 st.warning("스트레스 여부를 선택해주세요.")
             else:
-                st.session_state.step = 15
+                st.session_state.step = 16
                 st.rerun()
 
                 
-# STEP 15: 과거 치과적 이력 (Past Dental History)
+# STEP 16: 과거 치과적 이력 (Past Dental History)
 
-elif st.session_state.step == 15:
+elif st.session_state.step == 16:
     st.title("과거 치과적 이력 (Past Dental History)")
     st.markdown("---")
 
@@ -2155,7 +2242,7 @@ elif st.session_state.step == 15:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 14
+            st.session_state.step = 15
             st.rerun()
 
     with col2:
@@ -2172,12 +2259,12 @@ elif st.session_state.step == 15:
                 for e in errors:
                     st.warning(e)
             else:
-                st.session_state.step = 16
+                st.session_state.step = 17
                 st.rerun()
 
 
-# STEP 16: 과거 의과적 이력 (Past Medical History)
-elif st.session_state.step == 16:
+# STEP 17: 과거 의과적 이력 (Past Medical History)
+elif st.session_state.step == 17:
     st.title("과거 의과적 이력 (Past Medical History)")
     st.markdown("---")
 
@@ -2210,17 +2297,17 @@ elif st.session_state.step == 16:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 15
+            st.session_state.step = 16
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.step = 17
+            st.session_state.step = 18
             st.rerun()
 
   
-# STEP 17: 자극 검사
-elif st.session_state.step == 17:
+# STEP 18: 자극 검사
+elif st.session_state.step == 18:
     st.title("자극 검사 (Provocation Tests)")
     st.markdown("---")
 
@@ -2294,16 +2381,16 @@ elif st.session_state.step == 17:
 
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 16
+            st.session_state.step = 17
             st.rerun()
 
     with col2:
         if st.button("다음 단계로 이동 👉"):
-            st.session_state.step = 18
+            st.session_state.step = 19
             st.rerun()
 
-# STEP 18: 기능 평가
-elif st.session_state.step == 18:
+# STEP 19: 기능 평가
+elif st.session_state.step == 19:
     st.title("기능 평가 (Functional Impact)")
     st.markdown("---")
 
@@ -2410,7 +2497,7 @@ elif st.session_state.step == 18:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("이전 단계"):
-            st.session_state.step = 17
+            st.session_state.step = 18
             st.rerun()
 
     with col2:
@@ -2425,12 +2512,12 @@ elif st.session_state.step == 18:
                     st.warning(err)
             else:
                 save_session()                      # ← 최종 저장
-                st.session_state.step = 19
+                st.session_state.step = 20
                 st.rerun()
 
 
-# STEP 19: 결과
-elif st.session_state.step == 19:
+# STEP 20: 결과
+elif st.session_state.step == 20:
     st.title("📊 턱관절 질환 예비 진단 결과")
     st.markdown("---")
     results = compute_diagnoses(st.session_state)
