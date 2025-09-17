@@ -513,15 +513,9 @@
 			if (openingMM > maxOpeningRecord) {
 				maxOpeningRecord = openingMM;
 			}
-			// 0. 턱끝좌표기록
-			//const chinX = chinTip.x * canvasElement.width;
-			//const chinY = chinTip.y * canvasElement.height;
-			//trajectoryPoints.push({ x: chinX, y: chinY });
 
-			// 궤적 그리기
-			//drawTrajectory();
             
-            // 2. 턱 편이 계산
+            // 3. 턱 편이 계산
             const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
             const noseTip = landmarks[LANDMARKS.NOSE_TIP];
             const chinTip = landmarks[LANDMARKS.CHIN_TIP];
@@ -532,7 +526,13 @@
             // 턱 끝의 편이 계산
             const deviationPixels = (chinTip.x - centerLineX) * canvasElement.width;
             const deviationMM = Math.abs(deviationPixels) / pixelsPerMM;
-            
+			// 4. 턱끝좌표기록
+			const chinX = chinTip.x * canvasElement.width;
+			const chinY = chinTip.y * canvasElement.height;
+			trajectoryPoints.push({ x: chinX, y: chinY });
+
+			// 궤적 그리기
+			drawTrajectory();
             if (deviationMM > maxDeviationRecord.value) {
                 maxDeviationRecord.value = deviationMM;
                 maxDeviationRecord.direction = deviationPixels > 0 ? 'Right' : 'Left';
