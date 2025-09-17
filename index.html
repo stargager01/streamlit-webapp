@@ -617,31 +617,39 @@
         }
 
         // 이벤트 리스너
-        calibrateBtn.addEventListener('click', () => {
-            if (!isCalibrating) {
-                isCalibrating = true;
-                calibrateBtn.textContent = '보정 완료';
-                updateMessage('카드를 이마에 대고 화면의 사각형 영역에 맞춰주세요', 'info');
-                
-                // 3초 후 자동 보정 완료 (실제로는 카드 감지 알고리즘 필요)
-                setTimeout(() => {
-                    // 시뮬레이션: 85.6mm = ~240 pixels (예시값)
-                    pixelsPerMM = 240 / 85.6;
-                    isCalibrated = true;
-                    isCalibrating = false;
-                    
-                    calibrationSection.classList.add('completed');
-                    calibrationSection.querySelector('.calibration-info').innerHTML = 
-                        `✅ 보정 완료!<br>1mm = ${pixelsPerMM.toFixed(2)} pixels`;
-                    
-                    startMeasureBtn.disabled = false;
-                    calibrateBtn.disabled = true;
-                    
-                    updateMessage('보정이 완료되었습니다. 측정을 시작할 수 있습니다!', 'success');
-                    setTimeout(() => messageBox.style.display = 'none', 3000);
-                }, 3000);
-            }
-        });
+		calibrateBtn.addEventListener('click', () => {
+			if (!isCalibrating) {
+				isCalibrating = true;
+				calibrateBtn.textContent = '보정 완료';
+				updateMessage('카드를 이마에 대고 화면의 사각형 영역에 맞춰주세요', 'info');
+				
+				setTimeout(() => {
+					// handleCalibration 함수 실제 호출
+					if (results.multiFaceLandmarks && results.multiFaceLandmarks[0]) {
+						const landmarks = results.multiFaceLandmarks[0];
+						
+						// 얼굴 폭 기반 보정
+						const leftCheek = landmarks[234];
+						const rightCheek = landmarks[454];
+						const faceWidthPixels = Math.abs(rightCheek.x - leftCheek.x) * canvasElement.width;
+						const estimatedFaceWidthMM = 145;
+						
+						pixelsPerMM = faceWidthPixels / estimatedFaceWidthMM;
+						
+						// 비정상적인 값 방지
+						if (pixelsPerMM < 1 || pixelsPerMM > 10) {
+							pixelsPerMM = 3.5; // 기본값
+						}
+						
+						console.log(`보정 완료: ${pixelsPerMM.toFixed(2)} pixels/mm`);
+					}
+					
+					isCalibrated = true;
+					isCalibrating = false;
+					// ...
+				}, 3000);
+			}
+		});
 
 		startMeasureBtn.addEventListener('click', () => {
 			if (isCalibrated && !isMeasuring) {
@@ -686,31 +694,7 @@
 		  }
 		});
 
-		stopMeasureBtn.addEventListener('click', () => {
-			if (isMeasuring) {
-				isMeasuring = false;
-				startMeasureBtn.disabled = false;
-				stopMeasureBtn.disabled = true;
 
-				// 최종 패턴 분석
-				analyzePattern();
-
-				const resultData = {
-					timestamp: new Date().toISOString(),
-					measurements: {
-						maxOpening_mm: parseFloat(maxOpeningRecord.toFixed(1)),
-						jawDeviation_mm: parseFloat(maxDeviationRecord.value.toFixed(1)),
-						jawDeviation_direction: maxDeviationRecord.direction
-					},
-					calibration: { pixelsPerMM: parseFloat(pixelsPerMM.toFixed(2)) }
-				};
-
-				console.log('측정 결과:', JSON.stringify(resultData, null, 2));
-				updateMessage('측정이 완료되었습니다. 결과가 콘솔에 출력되었습니다.', 'success');
-
-				requestAnimationFrame(() => captureSnapshot());
-			}
-		});
 
 		function analyzePattern() {
 			const threshold = 2.0; // mm
