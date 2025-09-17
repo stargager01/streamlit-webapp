@@ -315,8 +315,7 @@
         let isCalibrating = false;
 		let deviationHistory = [];
 		const HISTORY_SIZE = 10;
-		// 전역 변수 추가
-		let lastLandmarks = null;
+
         // 랜드마크 인덱스 정의
         const LANDMARKS = {
             FOREHEAD_CENTER: 10,  // 미간
@@ -420,7 +419,7 @@
             
             if (results.multiFaceLandmarks && results.multiFaceLandmarks[0]) {
                 const landmarks = results.multiFaceLandmarks[0];
-				lastLandmarks = landmarks; // 최신 랜드마크 저장
+                
                 // 랜드마크 그리기
                 drawLandmarks(landmarks);
                 
@@ -647,16 +646,7 @@
 					
 					isCalibrated = true;
 					isCalibrating = false;
-					// 버튼 활성화
-					startMeasureBtn.disabled = false;
-					calibrateBtn.disabled = true;
-					calibrateBtn.textContent = '보정 완료';
-
-					// UI 표시
-					calibrationSection.classList.add('completed');
-					calibrationSection.querySelector('.calibration-info').textContent = '보정이 완료되었습니다.';
-					updateMessage('보정이 완료되었습니다. 이제 측정을 시작할 수 있습니다.', 'success');
-					setTimeout(() => messageBox.style.display = 'none', 3000);
+					// ...
 				}, 3000);
 			}
 		});
