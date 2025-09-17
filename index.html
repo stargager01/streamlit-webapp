@@ -606,31 +606,30 @@
             }
         });
 
-        stopMeasureBtn.addEventListener('click', () => {
-            if (isMeasuring) {
-                isMeasuring = false;
-                startMeasureBtn.disabled = false;
-                stopMeasureBtn.disabled = true;
-                
-                // 결과 데이터 생성
-                const resultData = {
-                    timestamp: new Date().toISOString(),
-                    measurements: {
-                        maxOpening_mm: parseFloat(maxOpeningRecord.toFixed(1)),
-                        jawDeviation_mm: parseFloat(maxDeviationRecord.value.toFixed(1)),
-                        jawDeviation_direction: maxDeviationRecord.direction
-                    },
-                    calibration: {
-                        pixelsPerMM: parseFloat(pixelsPerMM.toFixed(2))
-                    }
-                };
-                
-                // 콘솔에 JSON 출력
-                console.log('측정 결과:', JSON.stringify(resultData, null, 2));
-                
-                updateMessage('측정이 완료되었습니다. 결과가 콘솔에 출력되었습니다.', 'success');
-            }
-        });
+		stopMeasureBtn.addEventListener('click', () => {
+		  if (isMeasuring) {
+			isMeasuring = false;
+			startMeasureBtn.disabled = false;
+			stopMeasureBtn.disabled = true;
+
+			const resultData = {
+			  timestamp: new Date().toISOString(),
+			  measurements: {
+				maxOpening_mm: parseFloat(maxOpeningRecord.toFixed(1)),
+				jawDeviation_mm: parseFloat(maxDeviationRecord.value.toFixed(1)),
+				jawDeviation_direction: maxDeviationRecord.direction
+			  },
+			  calibration: { pixelsPerMM: parseFloat(pixelsPerMM.toFixed(2)) }
+			};
+
+			console.log('측정 결과:', JSON.stringify(resultData, null, 2));
+			updateMessage('측정이 완료되었습니다. 결과가 콘솔에 출력되었습니다.', 'success');
+
+			// 화면 스냅샷 저장 (최대개구량/턱편이판정 포함)
+			// 현재 DOM 표시값을 사용하므로 update 직후에 호출
+			requestAnimationFrame(() => captureSnapshot());
+		  }
+		});
 
         resetBtn.addEventListener('click', () => {
             // 모든 값 초기화
@@ -661,6 +660,79 @@
             setTimeout(() => messageBox.style.display = 'none', 3000);
         });
 
+
+		// 스냅샷 생성 및 다운로드
+		function captureSnapshot() {
+		  // 비디오/캔버스 크기 기준
+		  const width = videoElement.videoWidth || canvasElement.width;
+		  const height = videoElement.videoHeight || canvasElement.height;
+		  if (!width || !height) {
+			updateMessage('스냅샷을 만들 수 없습니다. 비디오 초기화 상태를 확인하세요.', 'error');
+			return;
+		  }
+
+		  // 오프스크린 캔버스 생성
+		  const snapCanvas = document.createElement('canvas');
+		  snapCanvas.width = width;
+		  snapCanvas.height = height;
+		  const ctx = snapCanvas.getContext('2d');
+
+		  // 1) 비디오 프레임 그리기
+		  try {
+			ctx.drawImage(videoElement, 0, 0, width, height);
+		  } catch (e) {
+			// 비디오 그리기 실패 시 배경 처리
+			ctx.fillStyle = '#000';
+			ctx.fillRect(0, 0, width, height);
+		  }
+
+		  // 2) 분석 오버레이 캔버스 합성 (현재 그려진 랜드마크/선 등)
+		  ctx.drawImage(canvasElement, 0, 0, width, height);
+
+		  // 3) 측정 텍스트 오버레이 (최대개구량, 턱편이판정, 필요시 머리 기울기)
+		  const maxOpeningText = maxOpeningValue.textContent;      // e.g., "43.2 mm"
+		  const jawText = jawDeviationValue.textContent;           // e.g., "Rt. 2.5 mm" 또는 "중앙"
+		  const headTiltText = headTiltValue.textContent;          // e.g., "1.2°"
+
+		  // 정보 박스 스타일
+		  const pad = 14;
+		  const boxW = Math.min(360, Math.round(width * 0.45));
+		  const boxH = 110;
+		  const boxX = width - boxW - 20;
+		  const boxY = 20;
+
+		  // 반투명 박스
+		  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+		  ctx.roundRect?.(boxX, boxY, boxW, boxH, 10);
+		  if (!ctx.roundRect) {
+			// 라운드 지원 안되면 일반 사각형
+			ctx.fillRect(boxX, boxY, boxW, boxH);
+		  } else {
+			ctx.fill();
+		  }
+
+		  // 텍스트
+		  ctx.fillStyle = '#fff';
+		  ctx.font = 'bold 18px Segoe UI, Arial, sans-serif';
+		  ctx.fillText('측정 요약', boxX + pad, boxY + pad + 6);
+
+		  ctx.font = '16px Segoe UI, Arial, sans-serif';
+		  const line1 = `최대개구량: ${maxOpeningText}`;
+		  const line2 = `턱편이판정: ${jawText}`;
+		  const line3 = `얼굴 기울기: ${headTiltText}`;
+
+		  ctx.fillText(line1, boxX + pad, boxY + 40);
+		  ctx.fillText(line2, boxX + pad, boxY + 64);
+		  ctx.fillText(line3, boxX + pad, boxY + 88);
+
+		  // 4) 파일 저장
+		  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+		  const link = document.createElement('a');
+		  link.download = `mm-snapshot_${ts}.png`;
+		  link.href = snapCanvas.toDataURL('image/png');
+		  link.click();
+		}
+		
         // 페이지 로드 시 초기화
         window.addEventListener('load', () => {
             initializeFaceMesh();
