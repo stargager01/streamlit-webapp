@@ -339,6 +339,7 @@
         const jawDeviationValue = document.getElementById('jawDeviationValue');
         const headTiltValue = document.getElementById('headTiltValue');
         const calibrationSection = document.getElementById('calibrationSection');
+ 
 		
 		let trajectoryPoints = [];
 
@@ -496,6 +497,9 @@
 
         // 측정 메트릭 계산
         function measureMetrics(landmarks) {
+			const upperLip = landmarks[LANDMARKS.UPPER_LIP_INNER];
+			const lowerLip = landmarks[LANDMARKS.LOWER_LIP_INNER];
+			const chinTip = landmarks[LANDMARKS.CHIN_TIP];		
 			// 0. 턱끝좌표기록
 			const chinX = chinTip.x * canvasElement.width;
 			const chinY = chinTip.y * canvasElement.height;
@@ -511,10 +515,14 @@
             const openingPixels = Math.abs(upperLip.y - lowerLip.y) * canvasElement.height;
             const openingMM = openingPixels / pixelsPerMM;
             
-            if (openingMM > maxOpeningRecord) {
-                maxOpeningRecord = openingMM;
-                maxOpeningValue.textContent = `${openingMM.toFixed(1)} mm`;
-            }
+			// 1. 실시간 개구량 표시
+			maxOpeningValue.textContent = `${openingMM.toFixed(1)} mm`;
+
+			// 2. 최대값 갱신
+			if (openingMM > maxOpeningRecord) {
+				maxOpeningRecord = openingMM;
+			}
+
             
             // 2. 턱 편이 계산
             const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
