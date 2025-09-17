@@ -10,7 +10,6 @@
             padding: 0;
             box-sizing: border-box;
         }
-		
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -340,6 +339,21 @@
         const jawDeviationValue = document.getElementById('jawDeviationValue');
         const headTiltValue = document.getElementById('headTiltValue');
         const calibrationSection = document.getElementById('calibrationSection');
+		
+		let trajectoryPoints = [];
+
+		function drawTrajectory() {
+			if (trajectoryPoints.length < 2) return;
+
+			canvasCtx.beginPath();
+			canvasCtx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+			for (let i = 1; i < trajectoryPoints.length; i++) {
+				canvasCtx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+			}
+			canvasCtx.strokeStyle = 'rgba(255, 165, 0, 0.8)'; // 주황색
+			canvasCtx.lineWidth = 2;
+			canvasCtx.stroke();
+		}
 
         // 초기화
         function initializeFaceMesh() {
@@ -482,6 +496,14 @@
 
         // 측정 메트릭 계산
         function measureMetrics(landmarks) {
+			// 0. 턱끝좌표기록
+			const chinX = chinTip.x * canvasElement.width;
+			const chinY = chinTip.y * canvasElement.height;
+			trajectoryPoints.push({ x: chinX, y: chinY });
+
+			// 궤적 그리기
+			drawTrajectory();	
+			
             // 1. 최대 개구량 계산
             const upperLip = landmarks[LANDMARKS.UPPER_LIP_INNER];
             const lowerLip = landmarks[LANDMARKS.LOWER_LIP_INNER];
@@ -597,7 +619,9 @@
                 isMeasuring = true;
                 startMeasureBtn.disabled = true;
                 stopMeasureBtn.disabled = false;
-                
+                // 궤적초기화
+				trajectoryPoints = [];
+
                 // 기록 초기화
                 maxOpeningRecord = 0;
                 maxDeviationRecord = { value: 0, direction: 'Center' };
@@ -632,34 +656,60 @@
 		  }
 		});
 
-        resetBtn.addEventListener('click', () => {
-            // 모든 값 초기화
-            isMeasuring = false;
-            isCalibrated = false;
-            isCalibrating = false;
-            maxOpeningRecord = 0;
-            maxDeviationRecord = { value: 0, direction: 'Center' };
-            pixelsPerMM = 1;
-            
-            // UI 초기화
-            maxOpeningValue.textContent = '0.0 mm';
-            jawDeviationValue.textContent = '중앙';
-            headTiltValue.textContent = '0.0°';
-            
-            // 버튼 상태 초기화
-            calibrateBtn.disabled = false;
-            calibrateBtn.textContent = '보정 시작';
-            startMeasureBtn.disabled = true;
-            stopMeasureBtn.disabled = true;
-            
-            // 보정 섹션 초기화
-            calibrationSection.classList.remove('completed');
-            calibrationSection.querySelector('.calibration-info').innerHTML = 
-                '신용카드나 주민등록증(가로 85.6mm)을<br>이마에 대고 \'보정 시작\' 버튼을 누르세요';
-            
-            updateMessage('시스템이 초기화되었습니다.', 'info');
-            setTimeout(() => messageBox.style.display = 'none', 3000);
-        });
+		stopMeasureBtn.addEventListener('click', () => {
+			if (isMeasuring) {
+				isMeasuring = false;
+				startMeasureBtn.disabled = false;
+				stopMeasureBtn.disabled = true;
+
+				// 최종 패턴 분석
+				analyzePattern();
+
+				const resultData = {
+					timestamp: new Date().toISOString(),
+					measurements: {
+						maxOpening_mm: parseFloat(maxOpeningRecord.toFixed(1)),
+						jawDeviation_mm: parseFloat(maxDeviationRecord.value.toFixed(1)),
+						jawDeviation_direction: maxDeviationRecord.direction
+					},
+					calibration: { pixelsPerMM: parseFloat(pixelsPerMM.toFixed(2)) }
+				};
+
+				console.log('측정 결과:', JSON.stringify(resultData, null, 2));
+				updateMessage('측정이 완료되었습니다. 결과가 콘솔에 출력되었습니다.', 'success');
+
+				requestAnimationFrame(() => captureSnapshot());
+			}
+		});
+
+		function analyzePattern() {
+			const threshold = 2.0; // mm
+			let pattern = 'Normal';
+			let patternKo = '정상';
+
+			if (maxDeviationRecord.value >= threshold) {
+				if (Math.abs(maxDeviationRecord.value - 0) >= threshold) {
+					pattern = 'Deflection';
+					patternKo = '굴절';
+				} else {
+					pattern = 'Deviation';
+					patternKo = '편차';
+				}
+			}
+
+			// jawDeviationValue에 최종 판정 표시
+			jawDeviationValue.textContent = `${patternKo} (${pattern})`;
+
+			// 필요하다면 색상 클래스 적용
+			jawDeviationValue.className = 'status-value';
+			if (pattern === 'Normal') {
+				jawDeviationValue.classList.add('pattern-normal');
+			} else if (pattern === 'Deviation') {
+				jawDeviationValue.classList.add('pattern-deviation');
+			} else {
+				jawDeviationValue.classList.add('pattern-deflection');
+			}
+		}
 
 
 		// 스냅샷 생성 및 다운로드
