@@ -504,7 +504,7 @@
             const lowerLip = landmarks[LANDMARKS.LOWER_LIP_INNER];
             
             const openingPixels = Math.abs(upperLip.y - lowerLip.y) * canvasElement.height;
-            const openingMM = openingPixels / pixelsPerMM;
+            const openingMM = openingPixels / pixelsPerMM-2;
             
 			// 1. 실시간 개구량 표시
 			maxOpeningValue.textContent = `${openingMM.toFixed(1)} mm`;
