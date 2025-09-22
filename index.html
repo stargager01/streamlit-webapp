@@ -135,6 +135,7 @@
 
   <script>
     // ===== 전역 상태 =====
+	let restDeltaY = 0; // 휴식 상태 코-턱 y 델타 (평균)
     let faceMesh, camera;
     let scene, renderer, threeCamera;
     let trajectoryLine, maxOpeningMarker;
@@ -481,6 +482,11 @@ function onFaceMeshResults(results) {
     y: -(nose.y * window.innerHeight) + window.innerHeight / 2,
     z: nose.z
   };
+	// calibration 중인 경우 델타 샘플 수집
+	if (isCalibrating && isFaceInGuide) {
+	  const deltaY = nosePos.y - chinPos.y; // positive 값 (턱 아래)
+	  calibrationSamples.push(deltaY);
+	}
 
   // 정확한 아랫입술 위치 계산 (여러 포인트의 평균)
   const lipX = (lowerLipCenter.x + lowerLipLeft.x + lowerLipRight.x + lowerLipBottom.x) / 4;
@@ -516,35 +522,30 @@ function onFaceMeshResults(results) {
   document.getElementById('webcam').classList.toggle('inverted', isFaceInGuide);
 
   // 교정 및 추적 로직
-  if (isCalibrated && isTracking) {
-    if (!chinRestPosition) {
-      chinRestPosition = { ...chinPos };
-      captureImage('jaw_calibration_start');
-    }
+	if (isCalibrated && isTracking) {
+	  const currentDeltaY = nosePos.y - chinPos.y;
+	  currentVerticalOpening = Math.max(0, currentDeltaY - restDeltaY); // 0 이상 클램프
 
-    // 수직 개구량 계산
-    currentVerticalOpening = Math.abs(chinPos.y - chinRestPosition.y);
-    if (currentVerticalOpening > maxVerticalOpening) {
-      maxVerticalOpening = currentVerticalOpening;
-      createMaxOpeningMarker(chinPos);
-    }
+	  if (currentVerticalOpening > maxVerticalOpening) {
+		maxVerticalOpening = currentVerticalOpening;
+		createMaxOpeningMarker(chinPos);
+	  }
 
-    // 궤적 업데이트
-    updateTrajectory(chinPos);
+	  // 궤적 업데이트 (기존)
+	  updateTrajectory(chinPos);
 
-    // 메트릭 업데이트
-    const verticalMM = currentVerticalOpening * PIXELS_TO_MM;
-    updateMetrics(verticalMM);
+	  // 메트릭 업데이트 (기존)
+	  const verticalMM = currentVerticalOpening * PIXELS_TO_MM;
+	  updateMetrics(verticalMM);
 
-    // 턱 개방 상태 체크
-    isJawTracking = currentVerticalOpening > JAW_OPEN_THRESHOLD;
-  }
+	  // 턱 개방 상태 체크 (기존)
+	  isJawTracking = currentVerticalOpening > JAW_OPEN_THRESHOLD;
+	}
 
   // 립 마커 그리기
   drawLipMarker();
 }
 
-// ===== 교정 시작 =====
 function startCalibration() {
   if (!isFaceInGuide) {
     updateStatus('얼굴을 가이드 영역에 맞춰주세요.');
@@ -558,7 +559,8 @@ function startCalibration() {
   document.getElementById('instructions').style.display = 'block';
   document.getElementById('instructions').textContent = '입을 다문 상태로 3초간 유지해주세요.';
 
-  calibrationSamples = [];
+  calibrationSamples = []; // 델타 샘플 배열 초기화 (number[])
+  isCalibrating = true; // 플래그 설정
   let calibrationStartTime = Date.now();
 
   const calibrationInterval = setInterval(() => {
@@ -569,15 +571,19 @@ function startCalibration() {
       return;
     }
 
-    if (currentLipPosition) {
-      calibrationSamples.push({ ...currentLipPosition });
-    }
-
     let progress = (Date.now() - calibrationStartTime) / 3000;
     document.getElementById('calibrationBar').style.width = `${Math.min(progress * 100, 100)}%`;
 
     if (progress >= 1) {
       clearInterval(calibrationInterval);
+      isCalibrating = false;
+      if (calibrationSamples.length > 0) {
+        // 평균 restDeltaY 계산
+        restDeltaY = calibrationSamples.reduce((sum, delta) => sum + delta, 0) / calibrationSamples.length;
+        captureImage('jaw_calibration_start');
+      } else {
+        restDeltaY = 0;
+      }
       isCalibrated = true;
       setPhase('tracking');
       updateStatus('교정이 완료되었습니다. 입을 천천히 벌려 최대 개구량을 측정하세요.');
@@ -591,6 +597,8 @@ function startCalibration() {
 
 // ===== 시스템 초기화 =====
 function resetSystem() {
+	restDeltaY = 0;
+	isCalibrating = false;
   isCalibrated = false;
   isTracking = false;
   isJawTracking = false;
