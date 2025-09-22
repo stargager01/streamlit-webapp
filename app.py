@@ -7,13 +7,22 @@ import datetime
 import json
 # app.py 상단에 이 import 구문을 추가하세요
 #from jaw_analyzer import jaw_analyzer_component
-import streamlit.components.v1 as components
+# AR 화면 표시 여부 상태값 초기화
+import streamlit.components.v1 as components 
+if "show_ar" not in st.session_state:
+    st.session_state.show_ar = False
 
-# index.html 읽어서 height 지정
+# 토글 버튼
+if st.button("개구량 측정 보기/숨기기"):
+    st.session_state.show_ar = not st.session_state.show_ar
+
+# index.html 읽기
 with open("index.html", "r", encoding="utf-8") as f:
     html_content = f.read()
 
-components.html(html_content, height=1400, scrolling=False)
+# 상태값이 True일 때만 AR 화면 표시
+if st.session_state.show_ar:
+    components.html(html_content, height=1400, scrolling=False)
 
 
 diagnosis_keys = {
