@@ -160,7 +160,12 @@
     let lipPositionHistory = [];
 
     // 가이드 경계 (화면 중심 기준 px)
-    const GUIDE_BOUNDS = { x: {min: -150, max: 150}, y: {min: -200, max: 200} };
+    //const GUIDE_BOUNDS = { x: {min: -150, max: 150}, y: {min: -200, max: 200} };
+	// 변경 (600×800px 범위로 확장)
+	const GUIDE_BOUNDS = {
+	  x: { min: -300, max: 300 },  // 좌우 600px
+	  y: { min: -400, max: 400 }   // 상하 800px
+	};
 
     // 파라미터
     const JAW_OPEN_THRESHOLD = 15;
