@@ -142,14 +142,14 @@
     #threeCanvas, #lipMarkerCanvas { pointer-events: none; }
     #webcam { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); z-index: 0; }
     #webcam.inverted { //filter: invert(1); }
-    #faceGuide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 600px; height: 800px; border: 3px dashed rgba(255,255,255,0.5); border-radius: 150px 150px 180px 180px / 200px 200px 180px 180px; pointer-events: none; display: flex; align-items: center; justify-content: center; z-index: 100; }
+    #faceGuide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; height: 533px; border: 3px dashed rgba(255,255,255,0.5); border-radius: 100px 100px 120px 120px / 133px 133px 120px 120px; pointer-events: none; display: flex; align-items: center; justify-content: center; z-index: 100; }
     #faceGuide.active { border-color: #00ff00; animation: pulse 1s infinite; }
     @keyframes pulse { 0%,100% {opacity:1;} 50% {opacity:.5;} }
     #guideText { color: #fff; text-align: center; font-size: 18px; background: rgba(0,0,0,.5); padding:10px; border-radius:10px; }
     .ui-panel { position: absolute; background: rgba(255,255,255,.95); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,.15); transition: all .3s; z-index: 150; }
     #statusPanel { top: 80px; left: 20px; max-width: 350px; }
-    #metricsPanel { top: 80px; right: 20px; min-width: 280px; }
-    #controlPanel { bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+    #metricsPanel { bottom: 20px; right: 20px; min-width: 280px; top:auto;}
+    #controlPanel { bottom: 20px; left: 20px; transform: none; display: flex; gap: 15px; flex-wrap: wrap; justify-content: flex-start; }
     #resultsPanel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,.98); padding: 30px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,.2); display: none; max-width: 500px; width: 90%; z-index: 300; }
     h2 { color:#333; margin-bottom: 15px; font-size: 1.4em; }
     h3 { color:#555; margin-bottom: 10px; font-size: 1.1em; }
@@ -251,11 +251,13 @@
     <div class="ui-panel" id="controlPanel">
       <button id="startBtn" onclick="startCalibration()">시작</button>
       <button id="resetBtn" onclick="resetSystem()" disabled>초기화</button>
-      <button id="saveBtn" onclick="saveResults()" disabled>결과 저장</button>
+
       <button id="captureMaxBtn" onclick="manualCaptureMaxOpening()">최대개구 캡쳐</button>
-      <button onclick="captureWithGrid()">격자 캡쳐</button>
+      <!--       
+	  <button id="saveBtn" onclick="saveResults()" disabled>결과 저장</button>
+	  <button onclick="captureWithGrid()">격자 캡쳐</button>
       <button id="toggleLipMarker" onclick="toggleLipMarker()">립마커 표시/숨김</button>
-      <button id="downloadImagesBtn" onclick="downloadAllImages()" style="display:none;">캡쳐 이미지 다운로드</button>
+      <button id="downloadImagesBtn" onclick="downloadAllImages()" style="display:none;">캡쳐 이미지 다운로드</button>-->
     </div>
 
     <div id="resultsPanel">
