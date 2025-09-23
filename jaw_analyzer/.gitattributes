@@ -1,4 +1,0 @@
-# .gitattributes
-* text=auto
-*.py text eol=lf
-*.html text eol=lf
