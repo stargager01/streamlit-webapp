@@ -546,17 +546,6 @@ if st.session_state.step == 0:
     이 시스템은 턱관절 건강 상태를 스스로 점검하고, 잠재적인 문제를 조기에 파악할 수 있도록 설계되었습니다.
     간단한 몇 단계의 설문을 통해, 맞춤형 예비 진단 결과를 받아보세요.
     """)
-st.markdown(
-    """
-    <a href="https://naver.me/5YSGHhn0" target="_blank">
-        <button style="padding:10px 20px; margin:5px;">의료진용 설문</button>
-    </a>
-    <a href="https://naver.me/x7jSxDDC" target="_blank">
-        <button style="padding:10px 20px; margin:5px;">환자용 설문</button>
-    </a>
-    """,
-    unsafe_allow_html=True
-)
 
     st.markdown("---")
     
@@ -574,6 +563,16 @@ st.markdown(
         * 제공된 모든 정보는 **익명으로 처리**되며, 개인 정보 보호를 최우선으로 합니다.
         * 솔직하게 답변해주시면 더욱 정확한 예비 진단 결과를 얻을 수 있습니다.
         """)
+    st.markdown("### 📋 설문 참여하기")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.link_button("의료진용 설문", "https://naver.me/5YSGHhn0")
+
+    with col2:
+        st.link_button("환자용 설문", "https://naver.me/x7jSxDDC")
+
 
     if 'show_exercise' not in st.session_state:
        st.session_state.show_exercise = False
