@@ -19,8 +19,8 @@ if "show_ar" not in st.session_state:
 # 버튼 2개 (key를 반드시 다르게!)
 #col1, col2 = st.columns(2)
 #with col1:
-    if st.button("개구량 측정 보기/숨기기", key="btn_basic"):
-        st.session_state.show_ar = not st.session_state.show_ar
+if st.button("개구량 측정 보기/숨기기", key="btn_basic"):
+    st.session_state.show_ar = not st.session_state.show_ar
 #with col2:
 #    if st.button("개구량 측정(개선) 보기/숨기기", key="btn_improved"):
 #        st.session_state.show_ar_improved = not st.session_state.show_ar_improved
