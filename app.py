@@ -9,35 +9,34 @@ import json
 #from jaw_analyzer import jaw_analyzer_component
 # AR 화면 표시 여부 상태값 초기화
 import streamlit.components.v1 as components 
+
+# 기존 상태값
 if "show_ar" not in st.session_state:
     st.session_state.show_ar = False
 
 # 새 상태값 (개선 버전)
 if "show_ar_improved" not in st.session_state:
     st.session_state.show_ar_improved = False
-    
-# 토글 버튼
+
+# 기존 버튼
 if st.button("개구량 측정 보기/숨기기"):
     st.session_state.show_ar = not st.session_state.show_ar
 
 # 새 버튼
 if st.button("개구량 측정(개선) 보기/숨기기"):
     st.session_state.show_ar_improved = not st.session_state.show_ar_improved
-    
-# index.html 읽기
-with open("index.html", "r", encoding="utf-8") as f:
-    html_content = f.read()
+
+# 기존 index.html 표시
+if st.session_state.show_ar:
+    with open("index.html", "r", encoding="utf-8") as f:
+        html_content = f.read()
+    components.html(html_content, height=1400, scrolling=False)
 
 # 개선된 index0925.html 표시
 if st.session_state.show_ar_improved:
     with open("index0925.html", "r", encoding="utf-8") as f:
         html_content2 = f.read()
     components.html(html_content2, height=1400, scrolling=False)
-    
-# 상태값이 True일 때만 AR 화면 표시
-if st.session_state.show_ar:
-    components.html(html_content, height=1400, scrolling=False)
-
 
 diagnosis_keys = {
     "muscle_pressure_2s_value": "선택 안 함",
