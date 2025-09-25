@@ -13,17 +13,17 @@ import streamlit.components.v1 as components
 # 상태값 초기화
 if "show_ar" not in st.session_state:
     st.session_state.show_ar = False
-if "show_ar_improved" not in st.session_state:
-    st.session_state.show_ar_improved = False
+#if "show_ar_improved" not in st.session_state:
+#    st.session_state.show_ar_improved = False
 
 # 버튼 2개 (key를 반드시 다르게!)
-col1, col2 = st.columns(2)
-with col1:
+#col1, col2 = st.columns(2)
+#with col1:
     if st.button("개구량 측정 보기/숨기기", key="btn_basic"):
         st.session_state.show_ar = not st.session_state.show_ar
-with col2:
-    if st.button("개구량 측정(개선) 보기/숨기기", key="btn_improved"):
-        st.session_state.show_ar_improved = not st.session_state.show_ar_improved
+#with col2:
+#    if st.button("개구량 측정(개선) 보기/숨기기", key="btn_improved"):
+#        st.session_state.show_ar_improved = not st.session_state.show_ar_improved
 
 # index.html 표시
 if st.session_state.show_ar:
@@ -32,10 +32,10 @@ if st.session_state.show_ar:
     components.html(html_content, height=1400, scrolling=False)
 
 # index0925.html 표시
-if st.session_state.show_ar_improved:
-    with open("index0925.html", "r", encoding="utf-8") as f:
-        html_content2 = f.read()
-    components.html(html_content2, height=1400, scrolling=False) 
+#if st.session_state.show_ar_improved:
+#    with open("index0925.html", "r", encoding="utf-8") as f:
+#        html_content2 = f.read()
+#    components.html(html_content2, height=1400, scrolling=False) 
 
 diagnosis_keys = {
     "muscle_pressure_2s_value": "선택 안 함",
