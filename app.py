@@ -12,6 +12,10 @@ import streamlit.components.v1 as components
 if "show_ar" not in st.session_state:
     st.session_state.show_ar = False
 
+# 새 상태값 (개선 버전)
+if "show_ar_improved" not in st.session_state:
+    st.session_state.show_ar_improved = False
+    
 # 토글 버튼
 if st.button("개구량 측정 보기/숨기기"):
     st.session_state.show_ar = not st.session_state.show_ar
