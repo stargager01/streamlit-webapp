@@ -16,10 +16,20 @@ if "show_ar" not in st.session_state:
 if st.button("개구량 측정 보기/숨기기"):
     st.session_state.show_ar = not st.session_state.show_ar
 
+# 새 버튼
+if st.button("개구량 측정(개선) 보기/숨기기"):
+    st.session_state.show_ar_improved = not st.session_state.show_ar_improved
+    
 # index.html 읽기
 with open("index.html", "r", encoding="utf-8") as f:
     html_content = f.read()
 
+# 개선된 index0925.html 표시
+if st.session_state.show_ar_improved:
+    with open("index0925.html", "r", encoding="utf-8") as f:
+        html_content2 = f.read()
+    components.html(html_content2, height=1400, scrolling=False)
+    
 # 상태값이 True일 때만 AR 화면 표시
 if st.session_state.show_ar:
     components.html(html_content, height=1400, scrolling=False)
